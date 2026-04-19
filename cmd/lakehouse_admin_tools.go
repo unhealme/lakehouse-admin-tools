@@ -13,7 +13,7 @@ import (
 	obs_int "github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-const Version = "0.0.1"
+const Version = "0.0.2"
 
 type OBSArguments struct {
 	BatchRename *obs_cmd.BatchRenameArgs `arg:"subcommand:batch-rename"`
@@ -73,7 +73,7 @@ func main() {
 	}
 	logger.Debug("arguments parsed.", logger.Args(args.ToArgs()...))
 
-	cfg := internal.GetConfig(args.ConfigFile)
+	cfg := internal.GetConfig(logger, args.ConfigFile)
 	if args.AccessKey != nil {
 		cfg.AccessKey = *args.AccessKey
 	}

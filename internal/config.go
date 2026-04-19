@@ -36,9 +36,7 @@ func (c Config) ToArgs() []any {
 	return args
 }
 
-var logger = DefaultLogger()
-
-func getConfigFromBuffer(buf []byte) *Config {
+func getConfigFromBuffer(logger *Logger, buf []byte) *Config {
 	c := &Config{}
 	if err := yaml.Unmarshal(buf, c); err != nil {
 		logger.Debug("unable to load config.", logger.Args("error", err))
@@ -62,15 +60,15 @@ func readConfigPath() []byte {
 	return nil
 }
 
-func GetConfig(path *string) *Config {
+func GetConfig(logger *Logger, path *string) *Config {
 	if path != nil {
 		buf, err := os.ReadFile(*path)
 		if err == nil {
-			return getConfigFromBuffer(buf)
+			return getConfigFromBuffer(logger, buf)
 		} else {
 			logger.Warn("unable to load config from path.", logger.Args("path", *path, "error", err))
-			return getConfigFromBuffer(nil)
+			return getConfigFromBuffer(logger, nil)
 		}
 	}
-	return getConfigFromBuffer(readConfigPath())
+	return getConfigFromBuffer(logger, readConfigPath())
 }
