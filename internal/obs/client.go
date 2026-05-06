@@ -38,12 +38,11 @@ func (c ObsClient) Walk(bucket, basePath string, maxDepth int, dirOnly bool) ite
 						}
 					}
 				}
-				if r.IsTruncated {
-					input.Marker = r.NextMarker
-					p++
-				} else {
+				if !r.IsTruncated {
 					break
 				}
+				input.Marker = r.NextMarker
+				p++
 			}
 		}
 	}
@@ -64,7 +63,7 @@ func (c ObsClient) Walk(bucket, basePath string, maxDepth int, dirOnly bool) ite
 						return
 					}
 					if op.IsDir() {
-						nextDepth = append(nextDepth, op.Name)
+						nextDepth = append(nextDepth, op.Name+"/")
 					}
 				}
 			}
