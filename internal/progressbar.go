@@ -9,8 +9,7 @@ import (
 )
 
 func NewProgressBar() *pterm.ProgressbarPrinter {
-	base := pterm.DefaultProgressbar
-	prog := &base
+	prog := pterm.DefaultProgressbar
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
@@ -18,5 +17,5 @@ func NewProgressBar() *pterm.ProgressbarPrinter {
 		prog.Stop()
 		os.Exit(int(status.(syscall.Signal)))
 	}()
-	return prog
+	return &prog
 }

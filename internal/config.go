@@ -1,11 +1,8 @@
 package internal
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
-	"strings"
 
 	yaml "github.com/goccy/go-yaml"
 )
@@ -13,37 +10,23 @@ import (
 const configFileName = "lakehouse-admin-tools.conf"
 
 type Config struct {
-	AccessKey    string  `yaml:"access_key"`
-	SecretKey    string  `yaml:"secret_key"`
-	SessionToken *string `yaml:"session_token"`
+	AccessKey    string `yaml:"access_key"`
+	SecretKey    string `yaml:"secret_key"`
+	SessionToken string `yaml:"session_token"`
 
 	OBS struct {
 		Endpoint string
 	}
 }
 
-func (c Config) ToArgs() []any {
-	var (
-		args []any
-		v    = reflect.ValueOf(c)
-	)
-	for _, f := range reflect.VisibleFields(reflect.TypeFor[Config]()) {
-		if !strings.HasPrefix(f.Name, "_") {
-			args = append(args, f.Name)
-			args = append(args, fmt.Sprintf("%#v", v.FieldByName(f.Name)))
-		}
-	}
-	return args
-}
-
 func getConfigFromBuffer(logger *Logger, buf []byte) *Config {
-	c := &Config{}
-	if err := yaml.Unmarshal(buf, c); err != nil {
+	var c Config
+	if err := yaml.Unmarshal(buf, &c); err != nil {
 		logger.Debug("unable to load config.", logger.Args("error", err))
-	} else {
-		logger.Debug("config loaded.", logger.Args(c.ToArgs()...))
+		return nil
 	}
-	return c
+	logger.Debug("config loaded.", logger.Args(ToArgs(c)...))
+	return &c
 }
 
 func readConfigPath() []byte {
@@ -60,13 +43,12 @@ func readConfigPath() []byte {
 	return nil
 }
 
-func GetConfig(logger *Logger, path *string) *Config {
-	if path != nil {
-		buf, err := os.ReadFile(*path)
-		if err == nil {
+func GetConfig(logger *Logger, path string) *Config {
+	if path != "" {
+		if buf, err := os.ReadFile(path); err == nil {
 			return getConfigFromBuffer(logger, buf)
 		} else {
-			logger.Warn("unable to load config from path.", logger.Args("path", *path, "error", err))
+			logger.Warn("unable to load config from path.", logger.Args("path", path, "error", err))
 			return getConfigFromBuffer(logger, nil)
 		}
 	}
