@@ -9,28 +9,27 @@ import (
 
 // OBS Batch Rename
 type BatchRenameArgs struct {
-	Bucket      string `arg:"positional,required" placeholder:"BUCKET"`
 	Path        string `arg:"positional,required" placeholder:"PATH"`
 	Prefix      string `arg:"positional,required" placeholder:"PREFIX"`
-	Concurrency int    `arg:"-j,--" default:"2" help:"max rename job concurrency" placeholder:"NUM"`
+	Concurrency int    `arg:"-j,--" default:"2" help:"max job concurrency" placeholder:"NUM"`
 	DirOnly     bool   `arg:"-d,--dir-only" help:"only rename directories"`
-	DryRun      bool   `arg:"-,--dry-run"`
-	NoProg      bool   `arg:"-,--no-progress" help:"disable progress"`
+	DryRun      bool   `arg:"-,--dry-run" help:"simulate action without doing anything"`
+	NoProg      bool   `arg:"-,--no-progress" help:"disable progress bar"`
 }
 
 // OBS Batch Set Storage Class
 type BatchSetStorageClassArgs struct {
 	InputFiles  []string `arg:"positional,required" placeholder:"FILE"`
-	Concurrency int      `arg:"-j,--" default:"2" help:"max set storage class job concurrency" placeholder:"NUM"`
-	DryRun      bool     `arg:"-,--dry-run"`
-	NoProg      bool     `arg:"-,--no-progress" help:"disable progress"`
+	Concurrency int      `arg:"-j,--" default:"2" help:"max job concurrency" placeholder:"NUM"`
+	DryRun      bool     `arg:"-,--dry-run" help:"simulate action without doing anything"`
+	NoProg      bool     `arg:"-,--no-progress" help:"disable progress bar"`
 }
 
 type OBSArguments struct {
 	BatchRename          *BatchRenameArgs          `arg:"subcommand:batch-rename"`
 	BatchSetStorageClass *BatchSetStorageClassArgs `arg:"subcommand:batch-set-storage-class"`
 
-	Endpoint *string `arg:"-e,--endpoint,env:OBS_ENDPOINT" placeholder:"ENDPOINT"`
+	Endpoint string `arg:"-e,--endpoint,env:OBS_ENDPOINT" placeholder:"ENDPOINT"`
 }
 
 type Arguments struct {
@@ -43,7 +42,7 @@ type Arguments struct {
 	Verbose      bool   `arg:"-v,--verbose" help:"enable debug logging"`
 }
 
-func (*Arguments) Epilogue() string {
+func (Arguments) Epilogue() string {
 	var b strings.Builder
 	fmt.Fprintln(&b, "Components:")
 	for comp, ver := range compVer {
@@ -52,6 +51,6 @@ func (*Arguments) Epilogue() string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
-func (*Arguments) Version() string {
+func (Arguments) Version() string {
 	return fmt.Sprintf("%s %s (%s-%s)", os.Args[0], Version, runtime.GOOS, runtime.GOARCH)
 }

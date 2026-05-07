@@ -1,10 +1,10 @@
 package cmd
 
 const (
-	ObsBatchRenameVersion          = "2026.05.04-0"
-	ObsBatchSetStorageClassVersion = "2026.05.05-0"
+	ObsBatchRenameVersion          = "2026.05.07-0"
+	ObsBatchSetStorageClassVersion = "2026.05.07-0"
 
-	Version = "0.1.0"
+	Version = "0.1.1"
 )
 
 var compVer = map[string]string{

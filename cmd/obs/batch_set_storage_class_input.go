@@ -46,18 +46,20 @@ func (d *DateRangeParsed) UnmarshalYAML(node ast.Node) error {
 
 	switch {
 	case (dateRange.Start != "" || dateRange.End != "") && dateRange.Format != "":
-		var start, end time.Time
+		var start, end *time.Time
 		if dateRange.Start != "" {
-			if err := internal.ParseStrftime(dateRange.Start, dateRange.Format, &start); err != nil {
+			start = &time.Time{}
+			if err := internal.ParseStrftime(dateRange.Start, dateRange.Format, start); err != nil {
 				return err
 			}
 		}
 		if dateRange.End != "" {
-			if err := internal.ParseStrftime(dateRange.End, dateRange.Format, &end); err != nil {
+			end = &time.Time{}
+			if err := internal.ParseStrftime(dateRange.End, dateRange.Format, end); err != nil {
 				return err
 			}
 		}
-		*d = DateRangeParsed{DateRangeConstraint, &start, &end, dateRange.Format, "", "", nil}
+		*d = DateRangeParsed{DateRangeConstraint, start, end, dateRange.Format, "", "", nil}
 	case dateRange.Pattern != "":
 		*d = DateRangeParsed{DateRangePattern, nil, nil, "", dateRange.Pattern, "", nil}
 	case dateRange.Regex != "":
@@ -69,7 +71,6 @@ func (d *DateRangeParsed) UnmarshalYAML(node ast.Node) error {
 }
 
 type BatchSetStorageClassInput struct {
-	Bucket      string
 	Path        string
 	DateRange   DateRangeParsed      `yaml:"date-range"`
 	TargetClass obs.StorageClassType `yaml:"target-class"`

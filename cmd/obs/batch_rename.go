@@ -1,7 +1,9 @@
 package obs
 
 import (
+	"fmt"
 	rand "math/rand/v2"
+	"path"
 	"slices"
 	"strings"
 	"time"
@@ -12,13 +14,20 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
+type pathToRename struct{ before, after string }
+
 func BatchRename(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.BatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
-	var paths [][2]string
-	for op := range obsClient.Walk(args.Bucket, args.Path, 1, args.DirOnly) {
-		if name, _ := strings.CutPrefix(op.Key, args.Path); len(name) > 0 && !strings.HasPrefix(name, args.Prefix) {
-			after := args.Path + args.Prefix + name
-			paths = append(paths, [2]string{op.Key, after})
+	inputPath, err := obs.PathFromURI(args.Path)
+	if err != nil {
+		logger.Warn("skipping input due to error.", logger.Args("path", args.Path, "error", err))
+		return
+	}
+	var paths []pathToRename
+	for op := range obsClient.Walk(logger, inputPath.Bucket, inputPath.Key, 1, args.DirOnly) {
+		if base, _ := strings.CutPrefix(op.Key, inputPath.Key); len(base) > 0 && !strings.HasPrefix(base, args.Prefix) {
+			after := path.Join(inputPath.Key, args.Prefix+base)
+			paths = append(paths, pathToRename{op.Key, after})
 		}
 	}
 
@@ -31,11 +40,11 @@ func BatchRename(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.Ba
 			defer prog.Stop()
 		}
 		internal.ParallelMap(
-			func(path [2]string) {
+			func(path pathToRename) {
 				if !args.DryRun {
-					obsClient.RenameObject(args.Bucket, path[0], path[1])
+					obsClient.RenameObject(logger, inputPath.Bucket, path.before, path.after)
 				} else {
-					logger.Info("renaming directory.", logger.Args("before", path[0], "after", path[1]))
+					logger.Info("renaming directory.", logger.Args("before", fmt.Sprintf("obs://%s/%s", inputPath.Bucket, path.before), "after", fmt.Sprintf("obs://%s/%s", inputPath.Bucket, path.after)))
 					time.Sleep(200 + rand.N(300*time.Millisecond))
 				}
 				if prog != nil {

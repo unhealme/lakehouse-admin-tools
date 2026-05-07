@@ -33,11 +33,11 @@ func main() {
 
 	switch {
 	case args.OBS != nil:
-		if args.OBS.Endpoint != nil {
-			cfg.OBS.Endpoint = *args.OBS.Endpoint
+		if args.OBS.Endpoint != "" {
+			cfg.OBS.Endpoint = args.OBS.Endpoint
 		}
 
-		obsClient, err := obs.NewClient(logger, cfg.OBS.Endpoint, cfg.AccessKey, cfg.SecretKey, cfg.SessionToken)
+		obsClient, err := obs.NewClient(cfg.OBS.Endpoint, cfg.AccessKey, cfg.SecretKey, cfg.SessionToken)
 		if err != nil {
 			logger.Fatal("unable to create OBS client.", logger.Args("error", err))
 		}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"errors"
 	"fmt"
 	"iter"
 	"reflect"
@@ -26,6 +27,9 @@ func ParallelMap[T any](task func(T), pool iter.Seq[T], concurrency int) {
 }
 
 func ParseStrftime(rawDt, format string, target *time.Time) error {
+	if target == nil {
+		return errors.New("required non nil pointer")
+	}
 	dt, err := timefmt.Parse(rawDt, format)
 	if err != nil {
 		return fmt.Errorf("parsing date %q with format %q: %w", rawDt, format, err)
