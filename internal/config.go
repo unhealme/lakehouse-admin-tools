@@ -14,8 +14,12 @@ type Config struct {
 	SecretKey    string `yaml:"secret_key"`
 	SessionToken string `yaml:"session_token"`
 
-	OBS struct {
+	Obs struct {
 		Endpoint string
+	}
+
+	Yarn struct {
+		RMAddress string
 	}
 }
 

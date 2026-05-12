@@ -18,7 +18,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-func BatchSetStorageClass(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.BatchSetStorageClassArgs) {
+func BatchSetStorageClass(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.ObsBatchSetStorageClassArgs) {
 	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
 	for _, inputFile := range args.InputFiles {
 		buf, err := os.ReadFile(inputFile)
@@ -37,7 +37,7 @@ func BatchSetStorageClass(logger *internal.Logger, obsClient *obs.ObsClient, arg
 	}
 }
 
-func processBatchSetStorageClassInput(logger *internal.Logger, obsClient *obs.ObsClient, input BatchSetStorageClassInput, args *cmd.BatchSetStorageClassArgs) {
+func processBatchSetStorageClassInput(logger *internal.Logger, obsClient *obs.ObsClient, input BatchSetStorageClassInput, args *cmd.ObsBatchSetStorageClassArgs) {
 	inputPath, err := obs.PathFromURI(input.Path)
 	if err != nil {
 		logger.Warn("skipping input due to error.", logger.Args("path", input.Path, "error", err))
@@ -122,12 +122,14 @@ func processSetStorageClass(logger *internal.Logger, obsClient *obs.ObsClient, b
 		)
 	} else {
 		var keys []string
+		var total int
 		for path := range walker {
 			if !path.IsDir() {
 				keys = append(keys, path.Key)
+				total += 1
 			}
 		}
-		prog, _ := internal.NewProgressBar().WithTitle("Setting Storage Class").WithTotal(len(keys)).Start()
+		prog, _ := internal.NewProgressBar().WithTitle("Setting Storage Class").WithTotal(total).Start()
 		defer prog.Stop()
 		internal.ParallelMap(
 			func(key string) {

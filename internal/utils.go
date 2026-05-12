@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -12,15 +13,18 @@ import (
 	timefmt "github.com/itchyny/timefmt-go"
 )
 
-type emptyType struct{}
-
-var empty emptyType
+func GetEnv(k, def string) string {
+	if v, e := os.LookupEnv(k); e {
+		return v
+	}
+	return def
+}
 
 func ParallelMap[T any](task func(T), pool iter.Seq[T], concurrency int) {
-	sem := make(chan emptyType, max(concurrency, 1))
+	sem := make(chan EmptyType, max(concurrency, 1))
 	var wg sync.WaitGroup
 	for i := range pool {
-		sem <- empty
+		sem <- Empty
 		wg.Go(func() { task(i); <-sem })
 	}
 	wg.Wait()
@@ -38,10 +42,10 @@ func ParseStrftime(rawDt, format string, target *time.Time) error {
 	return nil
 }
 
-func SliceToSet[T comparable](s []T) map[T]emptyType {
-	m := make(map[T]emptyType)
+func SliceToSet[T comparable](s []T) map[T]EmptyType {
+	m := make(map[T]EmptyType)
 	for _, i := range s {
-		m[i] = empty
+		m[i] = Empty
 	}
 	return m
 }
@@ -58,4 +62,8 @@ func ToArgs(a any) []any {
 		}
 	}
 	return args
+}
+
+func FormatDuration(msec int64) string {
+	return time.Duration(msec * int64(time.Millisecond)).String()
 }

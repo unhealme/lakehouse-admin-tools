@@ -16,7 +16,7 @@ import (
 
 type pathToRename struct{ before, after string }
 
-func BatchRename(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.BatchRenameArgs) {
+func BatchRename(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {
@@ -24,14 +24,15 @@ func BatchRename(logger *internal.Logger, obsClient *obs.ObsClient, args *cmd.Ba
 		return
 	}
 	var paths []pathToRename
+	var total int
 	for op := range obsClient.Walk(logger, inputPath.Bucket, inputPath.Key, 1, args.DirOnly) {
 		if base, _ := strings.CutPrefix(op.Key, inputPath.Key); len(base) > 0 && !strings.HasPrefix(base, args.Prefix) {
 			after := path.Join(inputPath.Key, args.Prefix+base)
 			paths = append(paths, pathToRename{op.Key, after})
+			total += 1
 		}
 	}
 
-	total := len(paths)
 	logger.Info("all obs paths fetched.", logger.Args("path to rename", total))
 	if total > 0 {
 		var prog *pterm.ProgressbarPrinter
