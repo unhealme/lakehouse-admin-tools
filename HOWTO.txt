@@ -1,0 +1,4 @@
+1. Place "lakehouse-admin-tools.conf" in the same directory as you execute the command
+2. Use "lakehouse-admin-tools" for linux hosts and "lakehouse-admin-tools.exe" for windows host
+3. All commands should already be documented in "lakehouse-admin-tools[.exe] [cmd] --help"
+4. Currently, UAM commands can only be run in the edgenode
