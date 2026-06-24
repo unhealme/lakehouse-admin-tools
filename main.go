@@ -140,6 +140,10 @@ func main() {
 			args.Uam.DescribeUser.UamClient = uamClient
 
 			uam_cmd.DescribeUser(logger, args.Uam.DescribeUser)
+		case args.Uam.ListMembers != nil:
+			args.Uam.ListMembers.UamClient = uamClient
+
+			uam_cmd.ListMembers(logger, args.Uam.ListMembers)
 		}
 	case args.Yarn != nil:
 		if args.Yarn.RMAddress != "" {

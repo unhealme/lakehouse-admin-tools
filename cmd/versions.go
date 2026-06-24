@@ -5,10 +5,11 @@ const (
 	ObsAnalyzeVersion                   = "2026.06.22-0"
 	ObsBatchRenameVersion               = "2026.06.22-0"
 	ObsBatchSetStorageClassVersion      = "2026.06.22-0"
-	UamDescribeUserVersion              = "2026.06.23-0"
+	UamDescribeUserVersion              = "2026.06.24-0"
+	UamListMembersVersion               = "2026.06.24-0"
 	YarnAutoKillAppsVersion             = "2026.06.22-0"
 
-	Version = "0.5.2"
+	Version = "0.6.0"
 )
 
 var compVer = map[string]string{
@@ -17,5 +18,6 @@ var compVer = map[string]string{
 	"obs-batch-rename":                ObsBatchRenameVersion,
 	"obs-batch-set-storage-class":     ObsBatchSetStorageClassVersion,
 	"uam-describe-user":               UamDescribeUserVersion,
+	"uam-list-members":                UamListMembersVersion,
 	"yarn-auto-kill-apps":             YarnAutoKillAppsVersion,
 }

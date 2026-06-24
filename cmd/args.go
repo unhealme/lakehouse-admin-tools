@@ -32,6 +32,7 @@ type ObsArguments struct {
 
 type UamArguments struct {
 	DescribeUser *UamDescribeUserArgs `arg:"subcommand:describe-user"`
+	ListMembers  *UamListMembersArgs  `arg:"subcommand:list-members"`
 
 	Url       string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
 	User      string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
@@ -129,7 +130,15 @@ type ObsBatchSetStorageClassArgs struct {
 
 // UAM Describe User
 type UamDescribeUserArgs struct {
-	Users []string `arg:"positional,required" placeholder:"USER"`
+	Users  []string `arg:"positional,required" placeholder:"USER"`
+	Format string   `arg:"-f,--format" default:"default" help:"output format" placeholder:"{default,csv}"`
+
+	UamClient *uam.UamClient `arg:"-"`
+}
+
+// UAM List Members
+type UamListMembersArgs struct {
+	Groups []string `arg:"positional,required" placeholder:"GROUP"`
 
 	UamClient *uam.UamClient `arg:"-"`
 }

@@ -1,6 +1,7 @@
 package uam
 
 import (
+	"encoding/csv"
 	"fmt"
 	"slices"
 	"strconv"
@@ -12,7 +13,31 @@ import (
 
 const defaultFmt = "%-18s : %s\n"
 
-func parseTime(t int64) string {
+type PrintFormat int
+
+const (
+	PrintFormatDefault PrintFormat = iota + 1
+	PrintFormatCSV
+)
+
+func parseGroup(values []string, base string) string {
+	var groups []string
+	for _, grp := range values {
+		if strings.Contains(grp, base) {
+			cn, _, _ := strings.Cut(grp, ",")
+			_, group, _ := strings.Cut(cn, "=")
+			groups = append(groups, group)
+		}
+	}
+	slices.Sort(groups)
+	return strings.Join(groups, ",")
+}
+
+func parseTime(ldapTime string) string {
+	if ldapTime == "0" {
+		return "0"
+	}
+	t, _ := strconv.ParseInt(ldapTime, 10, 64)
 	return time.Unix((t/10000000)-11644473600, 0).Local().String()
 }
 
@@ -29,26 +54,32 @@ func PrintDefault(entry *ldap.Entry, groupBase string) {
 		case "sAMAccountName":
 			fmt.Printf(defaultFmt, "username", attr.Values[0])
 		case "memberOf":
-			var groups []string
-			for _, grp := range attr.Values {
-				if strings.Contains(grp, groupBase) {
-					cn, _, _ := strings.Cut(grp, ",")
-					_, group, _ := strings.Cut(cn, "=")
-					groups = append(groups, group)
-				}
-			}
-			slices.Sort(groups)
-			fmt.Printf(defaultFmt, "group", strings.Join(groups, ","))
+			fmt.Printf(defaultFmt, "group", parseGroup(attr.Values, groupBase))
 		case "badPasswordTime", "lockoutTime", "pwdLastSet", "lastLogon":
-			switch attr.Values[0] {
-			case "0":
-				fmt.Printf(defaultFmt, attr.Name, attr.Values[0])
-			default:
-				i, _ := strconv.ParseInt(attr.Values[0], 10, 64)
-				fmt.Printf(defaultFmt, attr.Name, parseTime(i))
-			}
+			fmt.Printf(defaultFmt, attr.Name, parseTime(attr.Values[0]))
 		default:
 			fmt.Printf(defaultFmt, attr.Name, attr.Values[0])
 		}
 	}
+}
+
+func PrintCSV(writer *csv.Writer, entry *ldap.Entry, groupBase string) {
+	// name,username,mail,department,directorate,divisionGroup,division,group,distinguishedName,badPwdCount,badPasswordTime,lockoutTime,pwdLastSet,lastLogon
+	writer.Write(
+		[]string{
+			entry.GetAttributeValue("name"),
+			entry.GetAttributeValue("sAMAccountName"),
+			entry.GetAttributeValue("mail"),
+			entry.GetAttributeValue("department"),
+			entry.GetAttributeValue("extensionAttribute13"),
+			entry.GetAttributeValue("extensionAttribute14"),
+			entry.GetAttributeValue("extensionAttribute15"),
+			parseGroup(entry.GetAttributeValues("memberOf"), groupBase),
+			entry.DN,
+			entry.GetAttributeValue("badPwdCount"),
+			parseTime(entry.GetAttributeValue("badPasswordTime")),
+			parseTime(entry.GetAttributeValue("lockoutTime")),
+			parseTime(entry.GetAttributeValue("pwdLastSet")),
+			parseTime(entry.GetAttributeValue("lastLogon")),
+		})
 }
