@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 
 	ldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-ldap/ldap/v3/gssapi"
@@ -66,7 +68,7 @@ func (c UamClient) ListMembers(group string) error {
 		c.baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf("(&(objectClass=group)(sAMAccountName=%s))", group),
-		[]string{"cn", "member"},
+		[]string{"cn", "dn", "member"},
 		nil,
 	)
 	result, err := c.Search(req)
@@ -75,7 +77,26 @@ func (c UamClient) ListMembers(group string) error {
 	}
 	found := false
 	for _, entry := range result.Entries {
-		fmt.Printf("%s : %s\n", entry.GetAttributeValue("cn"), parseGroup(entry.GetAttributeValues("member"), ""))
+		var members []string
+		for _, memberCn := range entry.GetAttributeValues("member") {
+			cn, base, _ := strings.Cut(memberCn, ",")
+			getMember := ldap.NewSearchRequest(
+				base,
+				ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+				fmt.Sprintf("(%s)", cn),
+				[]string{"sAMAccountName"},
+				nil,
+			)
+			memberResult, err := c.Search(getMember)
+			if err != nil {
+				return err
+			}
+			for _, member := range memberResult.Entries {
+				members = append(members, member.GetAttributeValue("sAMAccountName"))
+			}
+		}
+		slices.Sort(members)
+		fmt.Printf("%s : %s\n", entry.GetAttributeValue("cn"), strings.Join(members, ","))
 		found = true
 	}
 	if !found {
