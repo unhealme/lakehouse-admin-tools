@@ -1,11 +1,8 @@
-package uam
+package cmd
 
-import (
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
-)
+import "github.com/unhealme/lakehouse-admin-tools/internal"
 
-func ListMembers(logger *internal.Logger, args *cmd.UamListMembersArgs) {
+func UamListMembers(logger *internal.Logger, args *UamListMembersArgs) {
 	logger.Debug("using list member args.", logger.Args(internal.ToArgs(*args)...))
 	for _, group := range args.Groups {
 		if err := args.UamClient.ListMembers(group); err != nil {

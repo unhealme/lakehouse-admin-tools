@@ -1,4 +1,4 @@
-package das
+package dataarts
 
 import (
 	"fmt"

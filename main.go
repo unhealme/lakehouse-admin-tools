@@ -5,12 +5,8 @@ import (
 
 	arg "github.com/alexflint/go-arg"
 	"github.com/unhealme/lakehouse-admin-tools/cmd"
-	das_cmd "github.com/unhealme/lakehouse-admin-tools/cmd/dataarts-studio"
-	obs_cmd "github.com/unhealme/lakehouse-admin-tools/cmd/obs"
-	uam_cmd "github.com/unhealme/lakehouse-admin-tools/cmd/uam"
-	yarn_cmd "github.com/unhealme/lakehouse-admin-tools/cmd/yarn"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
-	das "github.com/unhealme/lakehouse-admin-tools/internal/dataarts-studio"
+	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
 	"github.com/unhealme/lakehouse-admin-tools/internal/iam"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 	"github.com/unhealme/lakehouse-admin-tools/internal/uam"
@@ -51,7 +47,7 @@ func main() {
 		}
 
 		logger.Debug("creating DataArts Studio client.")
-		dasClient, err := das.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
+		dasClient, err := dataarts.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
 		if err != nil {
 			logger.Fatal("unable to create DataArts Studio client.", logger.Args("error", err))
 		}
@@ -76,7 +72,7 @@ func main() {
 				args.DataArts.CreateHetuConnection.AgentName = cfg.DataArts.Agent.Name
 			}
 
-			das_cmd.CreateHetuConnection(logger, args.DataArts.CreateHetuConnection)
+			cmd.DataArtsCreateHetuConnection(logger, args.DataArts.CreateHetuConnection)
 		}
 	case args.Obs != nil:
 		if args.Obs.Endpoint != "" {
@@ -93,18 +89,23 @@ func main() {
 		case args.Obs.Analyze != nil:
 			args.Obs.Analyze.ObsClient = obsClient
 
-			obs_cmd.Analyze(logger, args.Obs.Analyze)
+			cmd.ObsAnalyze(logger, args.Obs.Analyze)
 		case args.Obs.BatchRename != nil:
 			args.Obs.BatchRename.ObsClient = obsClient
 			if !strings.HasSuffix(args.Obs.BatchRename.Path, "/") {
 				args.Obs.BatchRename.Path += "/"
 			}
 
-			obs_cmd.BatchRename(logger, args.Obs.BatchRename)
+			cmd.ObsBatchRename(logger, args.Obs.BatchRename)
 		case args.Obs.BatchSetStorageClass != nil:
 			args.Obs.BatchSetStorageClass.ObsClient = obsClient
 
-			obs_cmd.BatchSetStorageClass(logger, args.Obs.BatchSetStorageClass)
+			cmd.ObsBatchSetStorageClass(logger, args.Obs.BatchSetStorageClass)
+		}
+	case args.Ps != nil:
+		switch {
+		case args.Ps.AutoKill != nil:
+			cmd.PsAutoKill(logger, args.Ps.AutoKill)
 		}
 	case args.Uam != nil:
 		if args.Uam.Url != "" {
@@ -139,11 +140,11 @@ func main() {
 		case args.Uam.DescribeUser != nil:
 			args.Uam.DescribeUser.UamClient = uamClient
 
-			uam_cmd.DescribeUser(logger, args.Uam.DescribeUser)
+			cmd.UamDescribeUser(logger, args.Uam.DescribeUser)
 		case args.Uam.ListMembers != nil:
 			args.Uam.ListMembers.UamClient = uamClient
 
-			uam_cmd.ListMembers(logger, args.Uam.ListMembers)
+			cmd.UamListMembers(logger, args.Uam.ListMembers)
 		}
 	case args.Yarn != nil:
 		if args.Yarn.RMAddress != "" {
@@ -160,7 +161,7 @@ func main() {
 		case args.Yarn.AutoKillApps != nil:
 			args.Yarn.AutoKillApps.YarnClient = yarnClient
 
-			yarn_cmd.AutoKillApps(logger, args.Yarn.AutoKillApps)
+			cmd.YarnAutoKillApps(logger, args.Yarn.AutoKillApps)
 		}
 	}
 }

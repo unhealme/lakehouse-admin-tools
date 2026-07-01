@@ -1,4 +1,4 @@
-package obs
+package cmd
 
 import (
 	"errors"
@@ -70,7 +70,7 @@ func (d *DateRangeParsed) UnmarshalYAML(node ast.Node) error {
 	return nil
 }
 
-type BatchSetStorageClassInput struct {
+type ObsBatchSetStorageClassInput struct {
 	Path        string
 	DateRange   DateRangeParsed      `yaml:"date-range"`
 	TargetClass obs.StorageClassType `yaml:"target-class"`

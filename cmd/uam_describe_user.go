@@ -1,4 +1,4 @@
-package uam
+package cmd
 
 import (
 	"encoding/csv"
@@ -6,12 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/uam"
 )
 
-func DescribeUser(logger *internal.Logger, args *cmd.UamDescribeUserArgs) {
+func UamDescribeUser(logger *internal.Logger, args *UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 	var writer *csv.Writer
 	printFmt := uam.PrintFormatDefault
@@ -20,23 +19,25 @@ func DescribeUser(logger *internal.Logger, args *cmd.UamDescribeUserArgs) {
 	case "csv":
 		printFmt = uam.PrintFormatCSV
 		writer = csv.NewWriter(os.Stdout)
-		writer.Write(
-			[]string{
-				"name",
-				"username",
-				"mail",
-				"department",
-				"directorate",
-				"divisionGroup",
-				"division",
-				"group",
-				"distinguishedName",
-				"badPwdCount",
-				"badPasswordTime",
-				"lockoutTime",
-				"pwdLastSet",
-				"lastLogon",
-			})
+		if !args.NoHeader {
+			writer.Write(
+				[]string{
+					"name",
+					"username",
+					"mail",
+					"department",
+					"directorate",
+					"divisionGroup",
+					"division",
+					"group",
+					"distinguishedName",
+					"badPwdCount",
+					"badPasswordTime",
+					"lockoutTime",
+					"pwdLastSet",
+					"lastLogon",
+				})
+		}
 		defer writer.Flush()
 	default:
 		logger.Fatal(fmt.Sprintf("invalid output format: %s", args.Format))

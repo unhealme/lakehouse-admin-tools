@@ -1,14 +1,13 @@
-package das
+package cmd
 
 import (
 	"strings"
 
 	"github.com/pterm/pterm"
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
-func CreateHetuConnection(logger *internal.Logger, args *cmd.DataArtsCreateHetuConnectionArgs) {
+func DataArtsCreateHetuConnection(logger *internal.Logger, args *DataArtsCreateHetuConnectionArgs) {
 	logger.Debug("using create hetu connection args.", logger.Args(internal.ToArgs(*args)...))
 	for _, userPair := range args.UserPairs {
 		userName, workspaceName, _ := strings.Cut(userPair, ":")

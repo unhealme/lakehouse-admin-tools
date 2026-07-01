@@ -1,4 +1,4 @@
-package obs
+package cmd
 
 import (
 	"fmt"
@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
 type pathToRename struct{ before, after string }
 
-func BatchRename(logger *internal.Logger, args *cmd.ObsBatchRenameArgs) {
+func ObsBatchRename(logger *internal.Logger, args *ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {

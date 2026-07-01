@@ -1,4 +1,4 @@
-package obs
+package cmd
 
 import (
 	"fmt"
@@ -13,12 +13,11 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-func BatchSetStorageClass(logger *internal.Logger, args *cmd.ObsBatchSetStorageClassArgs) {
+func ObsBatchSetStorageClass(logger *internal.Logger, args *ObsBatchSetStorageClassArgs) {
 	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
 	for _, inputFile := range args.InputFiles {
 		buf, err := os.ReadFile(inputFile)
@@ -26,7 +25,7 @@ func BatchSetStorageClass(logger *internal.Logger, args *cmd.ObsBatchSetStorageC
 			logger.Warn("unable to read input file. skipping..", logger.Args("file", inputFile, "error", err))
 			continue
 		}
-		var inputs []BatchSetStorageClassInput
+		var inputs []ObsBatchSetStorageClassInput
 		if err := yaml.Unmarshal(buf, &inputs); err != nil {
 			logger.Warn("unable to parse input file. skipping..", logger.Args("file", inputFile, "error", err))
 			continue
@@ -37,7 +36,7 @@ func BatchSetStorageClass(logger *internal.Logger, args *cmd.ObsBatchSetStorageC
 	}
 }
 
-func processBatchSetStorageClassInput(logger *internal.Logger, input BatchSetStorageClassInput, args *cmd.ObsBatchSetStorageClassArgs) {
+func processBatchSetStorageClassInput(logger *internal.Logger, input ObsBatchSetStorageClassInput, args *ObsBatchSetStorageClassArgs) {
 	inputPath, err := obs.PathFromURI(input.Path)
 	if err != nil {
 		logger.Warn("skipping input due to error.", logger.Args("path", input.Path, "error", err))

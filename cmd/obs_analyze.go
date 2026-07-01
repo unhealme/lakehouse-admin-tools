@@ -1,16 +1,15 @@
-package obs
+package cmd
 
 import (
 	"fmt"
 	"strings"
 	"sync"
 
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-func Analyze(logger *internal.Logger, args *cmd.ObsAnalyzeArgs) {
+func ObsAnalyze(logger *internal.Logger, args *ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
 	for _, uri := range args.Paths {
 		inputPath, err := obs.PathFromURI(uri)

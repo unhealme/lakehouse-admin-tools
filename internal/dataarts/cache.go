@@ -1,4 +1,4 @@
-package das
+package dataarts
 
 import "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/dataartsstudio/v1/model"
 

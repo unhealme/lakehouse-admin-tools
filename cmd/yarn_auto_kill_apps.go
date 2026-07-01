@@ -1,15 +1,14 @@
-package yarn
+package cmd
 
 import (
 	"errors"
 
 	"github.com/pterm/pterm"
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
 )
 
-func AutoKillApps(logger *internal.Logger, args *cmd.YarnAutoKillAppsArgs) {
+func YarnAutoKillApps(logger *internal.Logger, args *YarnAutoKillAppsArgs) {
 	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
 	apps, err := args.YarnClient.Applications(logger, []yarn.ApplicationState{yarn.RUNNING}, "", "", 0)
 	if err != nil {

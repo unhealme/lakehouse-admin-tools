@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	yaml "github.com/goccy/go-yaml"
-	das "github.com/unhealme/lakehouse-admin-tools/internal/dataarts-studio"
+	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
 )
 
 const configFileName = "lakehouse-admin-tools.conf"
@@ -22,7 +22,7 @@ type Config struct {
 		Agent      struct {
 			Id, Name string
 		}
-		HetuConfig das.DwConfig `yaml:"hetu_config"`
+		HetuConfig dataarts.DwConfig `yaml:"hetu_config"`
 	}
 
 	Obs struct {
