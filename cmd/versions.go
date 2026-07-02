@@ -6,11 +6,11 @@ const (
 	ObsBatchRenameVersion               = "2026.06.22-0"
 	ObsBatchSetStorageClassVersion      = "2026.06.22-0"
 	PsAutoKillVersion                   = "2026.06.30-1"
-	UamDescribeUserVersion              = "2026.07.01-0"
+	UamDescribeUserVersion              = "2026.07.02-0"
 	UamListMembersVersion               = "2026.06.24-1"
 	YarnAutoKillAppsVersion             = "2026.06.22-0"
 
-	Version = "0.7.1"
+	Version = "0.7.2"
 )
 
 var compVer = map[string]string{

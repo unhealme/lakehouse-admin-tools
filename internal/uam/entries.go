@@ -34,10 +34,12 @@ func parseGroup(values []string, base string) string {
 }
 
 func parseTime(ldapTime string) string {
-	if ldapTime == "0" {
+	t, err := strconv.ParseInt(ldapTime, 10, 64)
+	if err != nil {
+		return strconv.FormatInt(t, 10)
+	} else if t == 0 {
 		return "0"
 	}
-	t, _ := strconv.ParseInt(ldapTime, 10, 64)
 	return time.Unix((t/10000000)-11644473600, 0).Local().String()
 }
 
