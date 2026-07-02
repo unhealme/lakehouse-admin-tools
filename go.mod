@@ -9,7 +9,7 @@ require (
 	github.com/goccy/go-json v0.10.6
 	github.com/goccy/go-yaml v1.19.2
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.3+incompatible
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.202
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.203
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/pterm/pterm v0.12.83

@@ -12,6 +12,7 @@ import (
 	"github.com/go-ldap/ldap/v3/gssapi"
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/iana/flags"
+	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
@@ -106,7 +107,7 @@ func (c UamClient) ListMembers(group string) error {
 }
 
 func NewClient(
-	logger *internal.Logger, ldapUrl, user, passw string,
+	logger *pterm.Logger, ldapUrl, user, passw string,
 	baseDn, groupBase, domain, realm string,
 ) (*UamClient, error) {
 	base, err := ldap.DialURL(ldapUrl)

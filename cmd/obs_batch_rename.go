@@ -13,9 +13,11 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
+const ObsBatchRenameVersion = "2026.06.22-0"
+
 type pathToRename struct{ before, after string }
 
-func ObsBatchRename(logger *internal.Logger, args *ObsBatchRenameArgs) {
+func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {

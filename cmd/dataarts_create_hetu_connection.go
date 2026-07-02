@@ -7,7 +7,9 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
-func DataArtsCreateHetuConnection(logger *internal.Logger, args *DataArtsCreateHetuConnectionArgs) {
+const DataArtsCreateHetuConnectionVersion = "2026.06.19-0"
+
+func DataArtsCreateHetuConnection(logger *pterm.Logger, args *DataArtsCreateHetuConnectionArgs) {
 	logger.Debug("using create hetu connection args.", logger.Args(internal.ToArgs(*args)...))
 	for _, userPair := range args.UserPairs {
 		userName, workspaceName, _ := strings.Cut(userPair, ":")

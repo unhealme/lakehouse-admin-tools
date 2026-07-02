@@ -13,11 +13,14 @@ import (
 	"time"
 
 	"github.com/goccy/go-yaml"
+	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-func ObsBatchSetStorageClass(logger *internal.Logger, args *ObsBatchSetStorageClassArgs) {
+const ObsBatchSetStorageClassVersion = "2026.06.22-0"
+
+func ObsBatchSetStorageClass(logger *pterm.Logger, args *ObsBatchSetStorageClassArgs) {
 	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
 	for _, inputFile := range args.InputFiles {
 		buf, err := os.ReadFile(inputFile)
@@ -36,7 +39,7 @@ func ObsBatchSetStorageClass(logger *internal.Logger, args *ObsBatchSetStorageCl
 	}
 }
 
-func processBatchSetStorageClassInput(logger *internal.Logger, input ObsBatchSetStorageClassInput, args *ObsBatchSetStorageClassArgs) {
+func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetStorageClassInput, args *ObsBatchSetStorageClassArgs) {
 	inputPath, err := obs.PathFromURI(input.Path)
 	if err != nil {
 		logger.Warn("skipping input due to error.", logger.Args("path", input.Path, "error", err))
@@ -104,7 +107,7 @@ func processBatchSetStorageClassInput(logger *internal.Logger, input ObsBatchSet
 	}
 }
 
-func processSetStorageClass(logger *internal.Logger, obsClient *obs.ObsClient, bucket string, parent string, storageClass obs.StorageClassType, noProg bool, concurrency int) {
+func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, bucket string, parent string, storageClass obs.StorageClassType, noProg bool, concurrency int) {
 	if !strings.HasSuffix(parent, "/") {
 		parent += "/"
 	}

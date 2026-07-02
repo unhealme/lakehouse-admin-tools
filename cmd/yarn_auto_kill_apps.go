@@ -8,7 +8,9 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
 )
 
-func YarnAutoKillApps(logger *internal.Logger, args *YarnAutoKillAppsArgs) {
+const YarnAutoKillAppsVersion = "2026.06.22-0"
+
+func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
 	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
 	apps, err := args.YarnClient.Applications(logger, []yarn.ApplicationState{yarn.RUNNING}, "", "", 0)
 	if err != nil {

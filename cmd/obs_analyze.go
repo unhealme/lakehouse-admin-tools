@@ -5,11 +5,14 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-func ObsAnalyze(logger *internal.Logger, args *ObsAnalyzeArgs) {
+const ObsAnalyzeVersion = "2026.06.22-0"
+
+func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
 	for _, uri := range args.Paths {
 		inputPath, err := obs.PathFromURI(uri)

@@ -1,52 +1,21 @@
-package internal
+package config
 
 import (
 	"os"
 	"path/filepath"
 
 	yaml "github.com/goccy/go-yaml"
-	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
+	"github.com/pterm/pterm"
 )
 
 const configFileName = "lakehouse-admin-tools.conf"
 
-type Config struct {
-	AccessKey    string `yaml:"access_key"`
-	SecretKey    string `yaml:"secret_key"`
-	SessionToken string `yaml:"session_token"`
-	DomainId     string `yaml:"domain_id"`
-	Region       string
-
-	DataArts struct {
-		InstanceId string `yaml:"instance_id"`
-		Agent      struct {
-			Id, Name string
-		}
-		HetuConfig dataarts.DwConfig `yaml:"hetu_config"`
-	}
-
-	Obs struct {
-		Endpoint string
-	}
-
-	Uam struct {
-		Url, User, Password, Domain, Realm string
-		BaseDN                             string `yaml:"base_dn"`
-		GroupBase                          string `yaml:"group_base"`
-	}
-
-	Yarn struct {
-		RMAddress string `yaml:"rm_address"`
-	}
-}
-
-func getConfigFromBuffer(logger *Logger, buf []byte) *Config {
-	var c Config
+func getConfigFromBuffer(logger *pterm.Logger, buf []byte) *Arguments {
+	var c Arguments
 	if err := yaml.Unmarshal(buf, &c); err != nil {
 		logger.Debug("unable to load config.", logger.Args("error", err))
 		return nil
 	}
-	logger.Debug("config loaded.", logger.Args(ToArgs(c)...))
 	return &c
 }
 
@@ -64,7 +33,7 @@ func readConfigPath() []byte {
 	return nil
 }
 
-func GetConfig(logger *Logger, path string) *Config {
+func GetConfig(logger *pterm.Logger, path string) *Arguments {
 	if path != "" {
 		if buf, err := os.ReadFile(path); err == nil {
 			return getConfigFromBuffer(logger, buf)

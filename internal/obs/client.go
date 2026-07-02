@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/pterm/pterm"
 )
 
 type ObsClient struct{ *obs.ObsClient }
 
-func (c ObsClient) iterPaths(logger *internal.Logger, input obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPath] {
+func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPath] {
 	return func(yield func(ObsPath) bool) {
 		p := 1
 		for {
@@ -44,7 +44,7 @@ func (c ObsClient) iterPaths(logger *internal.Logger, input obs.ListObjectsInput
 	}
 }
 
-func (c ObsClient) Walk(logger *internal.Logger, bucket, basePath string, maxDepth int, dirOnly bool) iter.Seq[ObsPath] {
+func (c ObsClient) Walk(logger *pterm.Logger, bucket, basePath string, maxDepth int, dirOnly bool) iter.Seq[ObsPath] {
 	i := obs.ListObjectsInput{}
 	i.Bucket = bucket
 	i.MaxKeys = 1000
@@ -73,7 +73,7 @@ func (c ObsClient) Walk(logger *internal.Logger, bucket, basePath string, maxDep
 	}
 }
 
-func (c ObsClient) Walk0(logger *internal.Logger, bucket, basePath string, dirOnly bool) iter.Seq[ObsPath] {
+func (c ObsClient) Walk0(logger *pterm.Logger, bucket, basePath string, dirOnly bool) iter.Seq[ObsPath] {
 	i := obs.ListObjectsInput{}
 	i.Bucket = bucket
 	i.MaxKeys = 1000
@@ -82,7 +82,7 @@ func (c ObsClient) Walk0(logger *internal.Logger, bucket, basePath string, dirOn
 	return c.iterPaths(logger, i, -1, dirOnly)
 }
 
-func (c ObsClient) RenameObject(logger *internal.Logger, bucket, key, after string) {
+func (c ObsClient) RenameObject(logger *pterm.Logger, bucket, key, after string) {
 	fullKey := fmt.Sprintf("obs://%s/%s", bucket, key)
 	argsOk := logger.Args("before", fullKey, "after", fmt.Sprintf("obs://%s/%s", bucket, after))
 	if strings.HasSuffix(key, "/") {
@@ -102,7 +102,7 @@ func (c ObsClient) RenameObject(logger *internal.Logger, bucket, key, after stri
 	}
 }
 
-func (c ObsClient) SetStorageClass(logger *internal.Logger, bucket, key string, class obs.StorageClassType) {
+func (c ObsClient) SetStorageClass(logger *pterm.Logger, bucket, key string, class obs.StorageClassType) {
 	fullKey := fmt.Sprintf("obs://%s/%s", bucket, key)
 	_, err := c.SetObjectMetadata(&obs.SetObjectMetadataInput{Bucket: bucket, Key: key, MetadataDirective: obs.ReplaceNew, StorageClass: class})
 	if err != nil {

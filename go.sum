@@ -93,8 +93,8 @@ github.com/hashicorp/go-uuid v1.0.3 h1:2gKiV6YVmrJ1i2CKKa9obLvRieoRGviZFL26PcT/C
 github.com/hashicorp/go-uuid v1.0.3/go.mod h1:6SBZvOh/SIDV7/2o3Jml5SYk/TvGqwFJ/bN7x4byOro=
 github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.3+incompatible h1:b+z8YHmE6VVORGyAQ/Q1QfpsByJyPAR6AF12M1DXi6w=
 github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.3+incompatible/go.mod h1:l7VUhRbTKCzdOacdT4oWCwATKyvZqUOlOqr0Ous3k4s=
-github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.202 h1:GLG7UGUNWcZ65fFYFwi/tbC7IdTG4JAKwc9H+8H5VzE=
-github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.202/go.mod h1:M+yna96Fx9o5GbIUnF3OvVvQGjgfVSyeJbV9Yb1z/wI=
+github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.203 h1:mUI49885A5SDhxpy8cDjYX3t3mNzTTrXBk2UJyYtQ5o=
+github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.203/go.mod h1:M+yna96Fx9o5GbIUnF3OvVvQGjgfVSyeJbV9Yb1z/wI=
 github.com/itchyny/timefmt-go v0.1.8 h1:1YEo1JvfXeAHKdjelbYr/uCuhkybaHCeTkH8Bo791OI=
 github.com/itchyny/timefmt-go v0.1.8/go.mod h1:5E46Q+zj7vbTgWY8o5YkMeYb4I6GeWLFnetPy5oBrAI=
 github.com/jcmturner/aescts/v2 v2.0.0 h1:9YKLH6ey7H4eDBXW8khjYslgyqG2xZikXP0EQFKrle8=

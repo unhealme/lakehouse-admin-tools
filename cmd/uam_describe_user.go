@@ -6,11 +6,14 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/uam"
 )
 
-func UamDescribeUser(logger *internal.Logger, args *UamDescribeUserArgs) {
+const UamDescribeUserVersion = "2026.07.02-0"
+
+func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 	var writer *csv.Writer
 	printFmt := uam.PrintFormatDefault

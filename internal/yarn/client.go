@@ -15,6 +15,7 @@ import (
 	"github.com/jcmturner/gokrb5/v8/config"
 	"github.com/jcmturner/gokrb5/v8/credentials"
 	"github.com/jcmturner/gokrb5/v8/spnego"
+	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
@@ -23,7 +24,7 @@ type YarnRMClient struct {
 	RMAddress string
 }
 
-func (c YarnRMClient) Applications(logger *internal.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
+func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
 	req, err := http.NewRequest(http.MethodGet, c.RMAddress+"/ws/v1/cluster/apps", nil)
 	if err != nil {
 		return nil, err
@@ -70,7 +71,7 @@ func (c YarnRMClient) Applications(logger *internal.Logger, states []Application
 	return &apps, nil
 }
 
-func (c YarnRMClient) KillApplication(logger *internal.Logger, app Application) bool {
+func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) bool {
 	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/ws/v1/cluster/apps/%s/state", c.RMAddress, app.Id), bytes.NewBuffer([]byte(`{"state":"KILLED"}`)))
 	if err != nil {
 		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))

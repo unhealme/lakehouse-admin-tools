@@ -1,8 +1,13 @@
 package cmd
 
-import "github.com/unhealme/lakehouse-admin-tools/internal"
+import (
+	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/internal"
+)
 
-func UamListMembers(logger *internal.Logger, args *UamListMembersArgs) {
+const UamListMembersVersion = "2026.06.24-1"
+
+func UamListMembers(logger *pterm.Logger, args *UamListMembersArgs) {
 	logger.Debug("using list member args.", logger.Args(internal.ToArgs(*args)...))
 	for _, group := range args.Groups {
 		if err := args.UamClient.ListMembers(group); err != nil {
