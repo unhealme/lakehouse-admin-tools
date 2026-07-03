@@ -44,8 +44,8 @@ type UamArguments struct {
 	Url       string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
 	User      string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
 	Password  string `arg:"-,--password,env:LDAP_BIND_PASSWORD" placeholder:"LDAP_BIND_PASSWORD"`
-	BaseDN    string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN"`
-	GroupBase string `arg:"-g,--group-base" placeholder:"LDAP_GROUP_BASE"`
+	BaseDN    string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN" yaml:"base_dn"`
+	GroupBase string `arg:"-g,--group-base" placeholder:"LDAP_GROUP_BASE" yaml:"group_base"`
 	Domain    string `arg:"-d,--domain" placeholder:"LDAP_DOMAIN"`
 	Realm     string `arg:"-r,--realm" placeholder:"REALM"`
 }
