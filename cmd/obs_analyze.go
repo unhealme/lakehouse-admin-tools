@@ -10,7 +10,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-const ObsAnalyzeVersion = "2026.06.22-0"
+const ObsAnalyzeVersion = "2026.07.06-0"
 
 func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -28,6 +28,7 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 			inputIsFile bool
 			once        sync.Once
 		)
+		exists := false
 		for op := range args.ObsClient.Walk0(logger, inputPath.Bucket, inputPath.Key, args.DirOnly) {
 			suffix, _ := strings.CutPrefix(op.Key, strings.TrimRight(inputPath.Key, "/"))
 			once.Do(func() { inputIsFile = !strings.HasPrefix(suffix, "/") })
@@ -35,6 +36,7 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 				continue
 			}
 			if !inputIsFile && suffix == "/" {
+				exists = true
 				continue
 			}
 
@@ -45,8 +47,8 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 				size += op.Content.Size
 			}
 		}
-		if dirs+files < 1 {
-			fmt.Printf("%s: no such file or directory", uri)
+		if dirs+files < 1 && !exists {
+			fmt.Printf("%s: no such file or directory\n", uri)
 		} else {
 			fmt.Printf(
 				"%s: size: %d (%s), objects: %d (%d dirs, %d files)\n",

@@ -15,14 +15,15 @@ func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, d
 	return func(yield func(ObsPath) bool) {
 		p := 1
 		for {
-			logArgs := []any{"depth", depth, "path", fmt.Sprintf("obs://%s/%s", input.Bucket, input.Prefix), "page", p}
-			logger.Debug("listing obs paths.", logger.Args(logArgs...))
+			logArgs := logger.Args("depth", depth, "path", fmt.Sprintf("obs://%s/%s", input.Bucket, input.Prefix), "page", p)
+			logger.Debug("listing obs paths.", logArgs)
 			r, err := c.ListObjects(&input)
 			if err != nil {
-				logger.Warn("unable to list obs paths.", logger.Args(append(logArgs, "error", err)...))
+				// obsError, ok := err.(obs.ObsError)
+				logger.Error("unable to list obs paths.", append(logArgs, logger.Args("error", err)...))
 				break
 			}
-			logger.Debug("obs paths fetched.", logger.Args(append(logArgs, "contents", len(r.Contents), "common-prefix", len(r.CommonPrefixes))...))
+			logger.Debug("obs paths fetched.", append(logArgs, logger.Args("contents", len(r.Contents), "common-prefix", len(r.CommonPrefixes))...))
 			for _, v := range r.CommonPrefixes {
 				if !yield(NewPath(depth, input.Bucket, v, nil)) {
 					return
@@ -86,14 +87,22 @@ func (c ObsClient) RenameObject(logger *pterm.Logger, bucket, key, after string)
 	fullKey := fmt.Sprintf("obs://%s/%s", bucket, key)
 	argsOk := logger.Args("before", fullKey, "after", fmt.Sprintf("obs://%s/%s", bucket, after))
 	if strings.HasSuffix(key, "/") {
-		_, err := c.RenameFolder(&obs.RenameFolderInput{Bucket: bucket, Key: key, NewObjectKey: after})
+		_, err := c.RenameFolder(&obs.RenameFolderInput{
+			Bucket:       bucket,
+			Key:          key,
+			NewObjectKey: after,
+		})
 		if err != nil {
 			logger.Warn("unable to rename directory.", logger.Args("dir", fullKey, "error", err))
 		} else {
 			logger.Debug("rename directory success.", argsOk)
 		}
 	} else {
-		_, err := c.RenameFile(&obs.RenameFileInput{Bucket: bucket, Key: key, NewObjectKey: after})
+		_, err := c.RenameFile(&obs.RenameFileInput{
+			Bucket:       bucket,
+			Key:          key,
+			NewObjectKey: after,
+		})
 		if err != nil {
 			logger.Warn("unable to rename file.", logger.Args("file", fullKey, "error", err))
 		} else {
@@ -104,7 +113,12 @@ func (c ObsClient) RenameObject(logger *pterm.Logger, bucket, key, after string)
 
 func (c ObsClient) SetStorageClass(logger *pterm.Logger, bucket, key string, class obs.StorageClassType) {
 	fullKey := fmt.Sprintf("obs://%s/%s", bucket, key)
-	_, err := c.SetObjectMetadata(&obs.SetObjectMetadataInput{Bucket: bucket, Key: key, MetadataDirective: obs.ReplaceNew, StorageClass: class})
+	_, err := c.SetObjectMetadata(&obs.SetObjectMetadataInput{
+		Bucket:            bucket,
+		Key:               key,
+		MetadataDirective: obs.ReplaceNew,
+		StorageClass:      class,
+	})
 	if err != nil {
 		logger.Warn("unable to set storage class for object.", logger.Args("path", fullKey, "error", err))
 	} else {
@@ -116,6 +130,7 @@ func NewClient(endpoint string, ak, sk string, token string) (*ObsClient, error)
 	base, err := obs.New(ak, sk, endpoint,
 		obs.WithSecurityToken(token),
 		obs.WithSecurityProviders(obs.NewEcsSecurityProvider(1)),
+		obs.WithProxyFromEnv(true),
 	)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,10 @@
 package internal
 
-import "net/http"
+import (
+	"fmt"
+	"io"
+	"net/http"
+)
 
 type HttpNotOk struct {
 	Status int
@@ -10,5 +14,15 @@ type HttpNotOk struct {
 }
 
 func (e HttpNotOk) Error() string {
-	return "http not ok."
+	return fmt.Sprintf("HTTP%d(headers=%s, error=%s, body=%s)", e.Status, e.Header, e.Err, e.Body)
+}
+
+func HttpNotOkFromResponse(response *http.Response) error {
+	body, err := io.ReadAll(response.Body)
+	return HttpNotOk{
+		Status: response.StatusCode,
+		Header: response.Header,
+		Err:    err,
+		Body:   body,
+	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
-const DataArtsCreateHetuConnectionVersion = "2026.06.19-0"
+const DataArtsCreateHetuConnectionVersion = "2026.07.07-0"
 
 func DataArtsCreateHetuConnection(logger *pterm.Logger, args *DataArtsCreateHetuConnectionArgs) {
 	logger.Debug("using create hetu connection args.", logger.Args(internal.ToArgs(*args)...))
@@ -37,8 +37,14 @@ func DataArtsCreateHetuConnection(logger *pterm.Logger, args *DataArtsCreateHetu
 
 		logger.Debug("trying to create hetu connection.", logArgs(nil))
 		if err := args.DataArtsClient.CreateHetuConnection(*workspace.Id, user.Name, args.AgentId, args.AgentName, args.HetuConfig); err != nil {
-			logger.Error("unable to create hetu connection.", logArgs(err))
-			continue
+			if !strings.Contains(err.Error(), "DAYU.1010") {
+				logger.Error("unable to create hetu connection.", logArgs(err))
+				continue
+			} else {
+				logger.Info("hetu connection is already created.", logArgs(nil))
+			}
+		} else {
+			logger.Info("successfully created hetu connection.", logArgs(nil))
 		}
 
 		logger.Debug("trying to get hetu connection id.", logArgs(nil))
@@ -46,8 +52,6 @@ func DataArtsCreateHetuConnection(logger *pterm.Logger, args *DataArtsCreateHetu
 		if err != nil {
 			logger.Error("unable to get hetu connection id.", logArgs(err))
 			continue
-		} else {
-			logger.Info("successfully created hetu connection.", logArgs(nil))
 		}
 
 		logger.Debug("trying to assign connection permission.", logArgs(nil))

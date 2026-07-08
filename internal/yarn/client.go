@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -20,12 +21,16 @@ import (
 )
 
 type YarnRMClient struct {
-	*spnego.Client
-	RMAddress string
+	Http  *spnego.Client
+	RmUrl *url.URL
+}
+
+func (c YarnRMClient) Close() {
+	c.Http.CloseIdleConnections()
 }
 
 func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
-	req, err := http.NewRequest(http.MethodGet, c.RMAddress+"/ws/v1/cluster/apps", nil)
+	req, err := http.NewRequest(http.MethodGet, c.RmUrl.JoinPath("/ws/v1/cluster/apps").String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +56,7 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 	req.URL.RawQuery = query.Encode()
 
 	logger.Debug("fetching yarn applications.", logger.Args("url", req.URL.String()))
-	resp, err := c.Do(req)
+	resp, err := c.Http.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +77,18 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 }
 
 func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) bool {
-	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s/ws/v1/cluster/apps/%s/state", c.RMAddress, app.Id), bytes.NewBuffer([]byte(`{"state":"KILLED"}`)))
+	req, err := http.NewRequest(
+		http.MethodPut,
+		c.RmUrl.JoinPath(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id)).String(),
+		bytes.NewBuffer([]byte(`{"state":"KILLED"}`)),
+	)
 	if err != nil {
 		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
 		return false
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := c.Do(req)
+	resp, err := c.Http.Do(req)
 	if err != nil {
 		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
 		return false
@@ -113,5 +122,9 @@ func NewClient(rmAddress string) (*YarnRMClient, error) {
 	tr := http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	httpClient := &http.Client{Transport: &tr}
 	spnegoClient := spnego.NewClient(krbClient, httpClient, "")
-	return &YarnRMClient{spnegoClient, strings.TrimRight(rmAddress, "/")}, nil
+	rmUrl, err := url.Parse(rmAddress)
+	if err != nil {
+		return nil, err
+	}
+	return &YarnRMClient{spnegoClient, rmUrl}, nil
 }

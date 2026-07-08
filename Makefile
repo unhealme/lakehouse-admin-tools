@@ -3,8 +3,13 @@ prog = lakehouse-admin-tools
 build:
 	go build -o build/$(prog)
 
-static:
-	go build -trimpath -ldflags="-extldflags=-static" -o build/$(prog)
+static: static-linux static-windows
+
+static-linux:
+	GOOS=linux go build -trimpath -ldflags="-s -w -extldflags=-static" -o build/$(prog)
+
+static-windows:
+	GOOS=windows go build -trimpath -ldflags="-s -w -extldflags=-static" -o build/$(prog).exe
 
 release: export GOARCH = amd64
 release:

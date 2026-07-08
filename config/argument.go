@@ -25,6 +25,14 @@ type DataArtsArguments struct {
 	InstanceId string            `arg:"-i,--" placeholder:"INSTANCE_ID" yaml:"instance_id"`
 }
 
+type MrsArguments struct {
+	ListHetuTenants *cmd.MrsListHetuTenantsArgs `arg:"subcommand:list-hetu-tenants" yaml:"-"`
+
+	ClusterId  string `arg:"-,--cluster-id" placeholder:"CLUSTER_ID" yaml:"cluster_id"`
+	FimAddress string `arg:"-,--fim-url" placeholder:"FIM_ADDRESS" yaml:"fim_address"`
+	LoginUser  string `arg:"-u,--login-user" placeholder:"USER" yaml:"login_user"`
+}
+
 type ObsArguments struct {
 	Analyze              *cmd.ObsAnalyzeArgs              `arg:"subcommand:analyze" yaml:"-"`
 	BatchRename          *cmd.ObsBatchRenameArgs          `arg:"subcommand:batch-rename" yaml:"-"`
@@ -58,6 +66,7 @@ type YarnArguments struct {
 
 type Arguments struct {
 	DataArts *DataArtsArguments `arg:"subcommand:dataarts"`
+	Mrs      *MrsArguments      `arg:"subcommand:mrs"`
 	Obs      *ObsArguments      `arg:"subcommand:obs"`
 	Ps       *PsArguments       `arg:"subcommand:ps" yaml:"-"`
 	Uam      *UamArguments      `arg:"subcommand:uam"`
@@ -69,6 +78,7 @@ type Arguments struct {
 	SessionToken string `arg:"-,--token,env:HW_SECURITY_TOKEN" placeholder:"SECURITY_TOKEN" yaml:"session_token"`
 	DomainId     string `arg:"-d,--domain-id" placeholder:"DOMAIN_ID" yaml:"domain_id"`
 	Region       string `arg:"-r,--region" placeholder:"REGION"`
+	NoColor      bool   `arg:"-,--no-color" help:"disable colorized output" yaml:"no_color"`
 	Verbose      bool   `arg:"-v,--verbose" help:"enable debug logging"`
 }
 

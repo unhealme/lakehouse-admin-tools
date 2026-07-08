@@ -10,7 +10,9 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/config"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
+	"github.com/unhealme/lakehouse-admin-tools/internal/fim"
 	"github.com/unhealme/lakehouse-admin-tools/internal/iam"
+	"github.com/unhealme/lakehouse-admin-tools/internal/mrs"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 	"github.com/unhealme/lakehouse-admin-tools/internal/uam"
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
@@ -23,6 +25,9 @@ func main() {
 	arg.MustParse(&args)
 	if args.Verbose {
 		logger = logger.WithLevel(pterm.LogLevelDebug)
+	}
+	if args.NoColor {
+		pterm.DisableColor()
 	}
 	logger.Debug("parsed arguments.", logger.Args(internal.ToArgs(args)...))
 	cfg := config.GetConfig(logger, args.ConfigFile)
@@ -59,6 +64,28 @@ func main() {
 			}
 
 			cmd.DataArtsCreateHetuConnection(logger, subArgs)
+		}
+	case args.Mrs != nil:
+		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
+		if err != nil {
+			logger.Fatal("unable to create MRS client.", logger.Args("error", err))
+		}
+
+		fimClient, err := fim.NewClient(cfg.Mrs.FimAddress)
+		if err != nil {
+			logger.Fatal("unable to create FIM client.", logger.Args("error", err))
+		}
+		defer fimClient.Close()
+
+		switch {
+		case args.Mrs.ListHetuTenants != nil:
+			subArgs := args.Mrs.ListHetuTenants
+			subArgs.MrsClient = mrsClient
+			subArgs.FimClient = fimClient
+			subArgs.LoginUser = cfg.Mrs.LoginUser
+			subArgs.MrsClusterId = cfg.Mrs.ClusterId
+
+			cmd.MrsListHetuTenants(logger, subArgs)
 		}
 	case args.Obs != nil:
 		obsClient, err := obs.NewClient(cfg.Obs.Endpoint, cfg.AccessKey, cfg.SecretKey, cfg.SessionToken)
@@ -119,7 +146,7 @@ func main() {
 		if err != nil {
 			logger.Fatal("unable to create YARN client.", logger.Args("error", err))
 		}
-		defer yarnClient.CloseIdleConnections()
+		defer yarnClient.Close()
 
 		switch {
 		case args.Yarn.AutoKillApps != nil:

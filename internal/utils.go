@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"net/url"
 	"os"
 	"reflect"
 	"strconv"
@@ -13,6 +14,14 @@ import (
 
 	timefmt "github.com/itchyny/timefmt-go"
 )
+
+func BuildUrlEncodedPayload(payload map[string]string) string {
+	var array []string
+	for k, v := range payload {
+		array = append(array, fmt.Sprintf("%s=%s", url.QueryEscape(k), url.QueryEscape(v)))
+	}
+	return strings.Join(array, "&")
+}
 
 func GetEnv(k, def string) string {
 	if v, e := os.LookupEnv(k); e {
