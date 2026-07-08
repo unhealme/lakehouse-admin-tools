@@ -1,29 +1,17 @@
 package cmd
 
 import (
-	"errors"
-
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
 )
 
-const YarnAutoKillAppsVersion = "2026.06.22-0"
+const YarnAutoKillAppsVersion = "2026.07.08-0"
 
 func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
 	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
 	apps, err := args.YarnClient.Applications(logger, []yarn.ApplicationState{yarn.RUNNING}, "", "", 0)
 	if err != nil {
-		if err, match := errors.AsType[internal.HttpNotOk](err); match {
-			args := []any{"status", err.Status, "headers", err.Header}
-			if err.Err != nil {
-				args = append(args, "error", err.Err)
-			}
-			if err.Body != nil {
-				args = append(args, "body", string(err.Body))
-			}
-			logger.Fatal("get yarn applications return not ok.", logger.Args(args...))
-		}
 		logger.Fatal("unable to get yarn applications.", logger.Args("error", err))
 	}
 
@@ -45,11 +33,13 @@ func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
 			defer prog.Stop()
 		}
 		for _, app := range appToKill {
-			ok := true
+			var err error
 			if !args.DryRun {
-				ok = args.YarnClient.KillApplication(logger, app)
+				err = args.YarnClient.KillApplication(logger, app)
 			}
-			if ok {
+			if err != nil {
+				logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
+			} else {
 				logger.Info("yarn application killed.",
 					logger.Args(
 						"id", app.Id,

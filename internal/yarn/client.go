@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -62,11 +61,7 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, internal.HttpNotOk{Status: resp.StatusCode, Header: resp.Header, Err: err, Body: nil}
-		}
-		return nil, internal.HttpNotOk{Status: resp.StatusCode, Header: resp.Header, Err: err, Body: body}
+		return nil, internal.HttpNotOkFromResponse(resp)
 	}
 
 	var apps Applications
@@ -76,34 +71,26 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 	return &apps, nil
 }
 
-func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) bool {
+func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
 	req, err := http.NewRequest(
 		http.MethodPut,
 		c.RmUrl.JoinPath(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id)).String(),
 		bytes.NewBuffer([]byte(`{"state":"KILLED"}`)),
 	)
 	if err != nil {
-		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
-		return false
+		return err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
 	resp, err := c.Http.Do(req)
 	if err != nil {
-		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
-		return false
+		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 400 {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "header", resp.Header, "error", err))
-			return false
-		}
-		logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "header", resp.Header, "error", err, "body", string(body)))
-		return false
+		return internal.HttpNotOkFromResponse(resp)
 	}
-	return true
+	return nil
 }
 
 func NewClient(rmAddress string) (*YarnRMClient, error) {
