@@ -3,6 +3,7 @@ package uam
 import (
 	"encoding/csv"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -43,45 +44,44 @@ func parseTime(ldapTime string) string {
 	return time.Unix((t/10000000)-11644473600, 0).Local().String()
 }
 
-func PrintDefault(entry *ldap.Entry, groupBase string) {
-	fmt.Printf(defaultFmt, "distinguishedName", entry.DN)
+func PrintDefault(entry *ldap.Entry, groupBase string, writer *os.File) {
+	fmt.Fprintf(writer, defaultFmt, "distinguishedName", entry.DN)
 	for _, attr := range entry.Attributes {
 		switch attr.Name {
 		case "extensionAttribute13":
-			fmt.Printf(defaultFmt, "directorate", attr.Values[0])
+			fmt.Fprintf(writer, defaultFmt, "directorate", attr.Values[0])
 		case "extensionAttribute14":
-			fmt.Printf(defaultFmt, "divisionGroup", attr.Values[0])
+			fmt.Fprintf(writer, defaultFmt, "divisionGroup", attr.Values[0])
 		case "extensionAttribute15":
-			fmt.Printf(defaultFmt, "division", attr.Values[0])
+			fmt.Fprintf(writer, defaultFmt, "division", attr.Values[0])
 		case "sAMAccountName":
-			fmt.Printf(defaultFmt, "username", attr.Values[0])
+			fmt.Fprintf(writer, defaultFmt, "username", attr.Values[0])
 		case "memberOf":
-			fmt.Printf(defaultFmt, "group", parseGroup(attr.Values, groupBase))
+			fmt.Fprintf(writer, defaultFmt, "group", parseGroup(attr.Values, groupBase))
 		case "badPasswordTime", "lockoutTime", "pwdLastSet", "lastLogon":
-			fmt.Printf(defaultFmt, attr.Name, parseTime(attr.Values[0]))
+			fmt.Fprintf(writer, defaultFmt, attr.Name, parseTime(attr.Values[0]))
 		default:
-			fmt.Printf(defaultFmt, attr.Name, attr.Values[0])
+			fmt.Fprintf(writer, defaultFmt, attr.Name, attr.Values[0])
 		}
 	}
 }
 
-func PrintCSV(writer *csv.Writer, entry *ldap.Entry, groupBase string) {
+func PrintCSV(entry *ldap.Entry, groupBase string, writer *csv.Writer) {
 	// name,username,mail,department,directorate,divisionGroup,division,group,distinguishedName,badPwdCount,badPasswordTime,lockoutTime,pwdLastSet,lastLogon
-	writer.Write(
-		[]string{
-			entry.GetAttributeValue("name"),
-			entry.GetAttributeValue("sAMAccountName"),
-			entry.GetAttributeValue("mail"),
-			entry.GetAttributeValue("department"),
-			entry.GetAttributeValue("extensionAttribute13"),
-			entry.GetAttributeValue("extensionAttribute14"),
-			entry.GetAttributeValue("extensionAttribute15"),
-			parseGroup(entry.GetAttributeValues("memberOf"), groupBase),
-			entry.DN,
-			entry.GetAttributeValue("badPwdCount"),
-			parseTime(entry.GetAttributeValue("badPasswordTime")),
-			parseTime(entry.GetAttributeValue("lockoutTime")),
-			parseTime(entry.GetAttributeValue("pwdLastSet")),
-			parseTime(entry.GetAttributeValue("lastLogon")),
-		})
+	writer.Write([]string{
+		entry.GetAttributeValue("name"),
+		entry.GetAttributeValue("sAMAccountName"),
+		entry.GetAttributeValue("mail"),
+		entry.GetAttributeValue("department"),
+		entry.GetAttributeValue("extensionAttribute13"),
+		entry.GetAttributeValue("extensionAttribute14"),
+		entry.GetAttributeValue("extensionAttribute15"),
+		parseGroup(entry.GetAttributeValues("memberOf"), groupBase),
+		entry.DN,
+		entry.GetAttributeValue("badPwdCount"),
+		parseTime(entry.GetAttributeValue("badPasswordTime")),
+		parseTime(entry.GetAttributeValue("lockoutTime")),
+		parseTime(entry.GetAttributeValue("pwdLastSet")),
+		parseTime(entry.GetAttributeValue("lastLogon")),
+	})
 }

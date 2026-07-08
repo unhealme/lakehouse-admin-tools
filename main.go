@@ -122,7 +122,7 @@ func main() {
 	case args.Uam != nil:
 		uamClient, err := uam.NewClient(
 			logger, cfg.Uam.Url, cfg.Uam.User, cfg.Uam.Password,
-			cfg.Uam.BaseDN, cfg.Uam.GroupBase, cfg.Uam.Domain, cfg.Uam.Realm,
+			cfg.Uam.MailDomain, cfg.Uam.Realm,
 		)
 		if err != nil {
 			logger.Fatal("unable to create UAM client.", logger.Args("error", err))
@@ -132,11 +132,14 @@ func main() {
 		switch {
 		case args.Uam.DescribeUser != nil:
 			subArgs := args.Uam.DescribeUser
+			subArgs.BaseDn = cfg.Uam.BaseDN
+			subArgs.GroupBase = cfg.Uam.GroupBase
 			subArgs.UamClient = uamClient
 
 			cmd.UamDescribeUser(logger, subArgs)
 		case args.Uam.ListMembers != nil:
 			subArgs := args.Uam.ListMembers
+			subArgs.BaseDn = cfg.Uam.BaseDN
 			subArgs.UamClient = uamClient
 
 			cmd.UamListMembers(logger, subArgs)

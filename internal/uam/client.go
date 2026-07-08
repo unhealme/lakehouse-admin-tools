@@ -1,11 +1,9 @@
 package uam
 
 import (
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"net/url"
-	"slices"
 	"strings"
 
 	ldap "github.com/go-ldap/ldap/v3"
@@ -18,14 +16,14 @@ import (
 
 type UamClient struct {
 	*ldap.Conn
-	baseDn, groupBase, domain string
+	mailDomain string
 }
 
-func (c UamClient) DescribeUser(user string, printFmt PrintFormat, writer *csv.Writer) error {
+func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
 	req := ldap.NewSearchRequest(
-		c.baseDn,
+		baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", user, c.domain),
+		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", user, c.mailDomain),
 		[]string{
 			"badPasswordTime",
 			"badPwdCount",
@@ -46,27 +44,17 @@ func (c UamClient) DescribeUser(user string, printFmt PrintFormat, writer *csv.W
 	)
 	result, err := c.Search(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	found := false
-	for _, entry := range result.Entries {
-		switch printFmt {
-		case PrintFormatDefault:
-			PrintDefault(entry, c.groupBase)
-		case PrintFormatCSV:
-			PrintCSV(writer, entry, c.groupBase)
-		}
-		found = true
+	if len(result.Entries) > 0 {
+		return result.Entries, nil
 	}
-	if !found {
-		return errors.New("user not found")
-	}
-	return nil
+	return nil, errors.New("user not found")
 }
 
-func (c UamClient) ListMembers(group string) error {
+func (c UamClient) ListMembers(baseDn, group string) ([]*ldap.Entry, error) {
 	req := ldap.NewSearchRequest(
-		c.baseDn,
+		baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		fmt.Sprintf("(&(objectClass=group)(sAMAccountName=%s))", group),
 		[]string{"cn", "dn", "member"},
@@ -74,11 +62,10 @@ func (c UamClient) ListMembers(group string) error {
 	)
 	result, err := c.Search(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	found := false
+	var members []*ldap.Entry
 	for _, entry := range result.Entries {
-		var members []string
 		for _, memberCn := range entry.GetAttributeValues("member") {
 			cn, base, _ := strings.Cut(memberCn, ",")
 			getMember := ldap.NewSearchRequest(
@@ -90,25 +77,21 @@ func (c UamClient) ListMembers(group string) error {
 			)
 			memberResult, err := c.Search(getMember)
 			if err != nil {
-				return err
+				return nil, err
 			}
-			for _, member := range memberResult.Entries {
-				members = append(members, member.GetAttributeValue("sAMAccountName"))
-			}
+			members = append(members, memberResult.Entries...)
 		}
-		slices.Sort(members)
-		fmt.Printf("%s : %s\n", entry.GetAttributeValue("cn"), strings.Join(members, ","))
-		found = true
 	}
-	if !found {
-		return errors.New("group not found")
+	if len(members) > 0 {
+		return members, nil
 	}
-	return nil
+	return nil, errors.New("group not found")
 }
 
 func NewClient(
-	logger *pterm.Logger, ldapUrl, user, passw string,
-	baseDn, groupBase, domain, realm string,
+	logger *pterm.Logger,
+	ldapUrl, user, passw string,
+	mailDomain, realm string,
 ) (*UamClient, error) {
 	base, err := ldap.DialURL(ldapUrl)
 	if err != nil {
@@ -141,5 +124,5 @@ func NewClient(
 			return nil, err
 		}
 	}
-	return &UamClient{base, baseDn, groupBase, domain}, nil
+	return &UamClient{base, mailDomain}, nil
 }

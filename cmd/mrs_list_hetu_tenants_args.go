@@ -6,7 +6,7 @@ import (
 )
 
 type MrsListHetuTenantsArgs struct {
-	OutputFile   string `arg:"-o,--" placeholder:"FILE" help:"write output to FILE instead of stdout"`
+	OutputFile   string `arg:"-o,--" placeholder:"FILE" help:"write result to FILE instead of stdout"`
 	FimClusterId int    `arg:"-,--fim-cluster-id" default:"1" placeholder:"NUM"`
 	NoHeader     bool   `arg:"-,--no-header" help:"do not print header"`
 

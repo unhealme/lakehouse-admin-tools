@@ -49,13 +49,13 @@ type UamArguments struct {
 	DescribeUser *cmd.UamDescribeUserArgs `arg:"subcommand:describe-user" yaml:"-"`
 	ListMembers  *cmd.UamListMembersArgs  `arg:"subcommand:list-members" yaml:"-"`
 
-	Url       string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
-	User      string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
-	Password  string `arg:"-,--password,env:LDAP_BIND_PASSWORD" placeholder:"LDAP_BIND_PASSWORD"`
-	BaseDN    string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN" yaml:"base_dn"`
-	GroupBase string `arg:"-g,--group-base" placeholder:"LDAP_GROUP_BASE" yaml:"group_base"`
-	Domain    string `arg:"-d,--domain" placeholder:"LDAP_DOMAIN"`
-	Realm     string `arg:"-r,--realm" placeholder:"REALM"`
+	Url        string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
+	User       string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
+	Password   string `arg:"-,--password,env:LDAP_BIND_PASSWORD" placeholder:"LDAP_BIND_PASSWORD"`
+	BaseDN     string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN" yaml:"base_dn"`
+	GroupBase  string `arg:"-g,--group-base" placeholder:"LDAP_GROUP_BASE" yaml:"group_base"`
+	MailDomain string `arg:"-d,--mail-domain" placeholder:"LDAP_MAIL_DOMAIN" yaml:"mail_domain"`
+	Realm      string `arg:"-r,--realm" placeholder:"REALM"`
 }
 
 type YarnArguments struct {
