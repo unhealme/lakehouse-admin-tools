@@ -52,7 +52,7 @@ func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
 	return nil, errors.New("user not found")
 }
 
-func (c UamClient) ListMembers(baseDn, group string) ([]*ldap.Entry, error) {
+func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
 	req := ldap.NewSearchRequest(
 		baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -64,8 +64,11 @@ func (c UamClient) ListMembers(baseDn, group string) ([]*ldap.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-	var members []*ldap.Entry
+
+	var groupInfos []*GroupInfo
 	for _, entry := range result.Entries {
+		var groupInfo GroupInfo
+		groupInfo.Group = entry
 		for _, memberCn := range entry.GetAttributeValues("member") {
 			cn, base, _ := strings.Cut(memberCn, ",")
 			getMember := ldap.NewSearchRequest(
@@ -79,11 +82,13 @@ func (c UamClient) ListMembers(baseDn, group string) ([]*ldap.Entry, error) {
 			if err != nil {
 				return nil, err
 			}
-			members = append(members, memberResult.Entries...)
+			groupInfo.Members = append(groupInfo.Members, memberResult.Entries...)
 		}
+		groupInfos = append(groupInfos, &groupInfo)
 	}
-	if len(members) > 0 {
-		return members, nil
+
+	if len(groupInfos) > 0 {
+		return groupInfos, nil
 	}
 	return nil, errors.New("group not found")
 }
