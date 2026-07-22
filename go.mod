@@ -5,15 +5,17 @@ go 1.26.4
 require (
 	github.com/alexflint/go-arg v1.6.1
 	github.com/beltran/gohive/v2 v2.1.0
-	github.com/go-ldap/ldap/v3 v3.4.13
+	github.com/go-ldap/ldap/v3 v3.4.14
+	github.com/gobwas/glob v0.2.3
 	github.com/goccy/go-json v0.10.6
 	github.com/goccy/go-yaml v1.19.2
-	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.3+incompatible
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.204
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.6+incompatible
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.207
 	github.com/itchyny/timefmt-go v0.1.8
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/pterm/pterm v0.12.83
 	github.com/shirou/gopsutil/v4 v4.26.6
+	go.uber.org/atomic v1.11.0
 )
 
 require (
@@ -23,13 +25,13 @@ require (
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
-	github.com/apache/thrift v0.23.0 // indirect
+	github.com/apache/thrift v0.24.0 // indirect
 	github.com/beltran/gosasl v1.0.0 // indirect
 	github.com/beltran/gssapi v0.0.0-20200324152954-d86554db4bab // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/console v1.0.5 // indirect
-	github.com/ebitengine/purego v0.10.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/ebitengine/purego v0.10.2 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gookit/color v1.6.1 // indirect

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	timefmt "github.com/itchyny/timefmt-go"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 func BuildUrlEncodedPayload(payload map[string]string) string {
@@ -116,4 +117,26 @@ func ParseSize(si string) (int64, error) {
 		return int64(size * mul), nil
 	}
 	return 0, fmt.Errorf("unable to parse size %s to int", si)
+}
+
+func SoftKill(process *process.Process) error {
+	if running, _ := process.IsRunning(); running {
+		if err := process.Terminate(); err != nil {
+			return err
+		}
+	} else {
+		return nil
+	}
+	for i := 1; i <= 15; i++ {
+		if running, _ := process.IsRunning(); !running {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	if running, _ := process.IsRunning(); running {
+		if err := process.Kill(); err != nil {
+			return err
+		}
+	}
+	return nil
 }

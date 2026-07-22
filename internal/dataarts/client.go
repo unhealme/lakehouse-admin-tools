@@ -14,7 +14,7 @@ type DataArtsClient struct{ *das.DataArtsStudioClient }
 
 func (c DataArtsClient) CreateHetuConnection(
 	workspaceId, connectionName, agentId, agentName string,
-	hetuConfig *DwConfig,
+	hetuConfig DwConfig,
 ) error {
 	dwConf := any(hetuConfig)
 	voDev := model.ApigDataSourceVo{
@@ -59,6 +59,18 @@ func (c DataArtsClient) CreateResourcePermission(workspaceId string, resource *m
 	return err
 }
 
+func (c DataArtsClient) GetConnectionConfig(workspaceId, connectionId string) (*model.ShowDataconnectionResponse, error) {
+	req := &model.ShowDataconnectionRequest{
+		Workspace:        workspaceId,
+		DataConnectionId: connectionId,
+	}
+	resp, err := c.ShowDataconnection(req)
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
 func (c DataArtsClient) GetConnectionFromName(workspaceId, connectionName string, refreshCache bool) (*model.ApigDataSourceView, error) {
 	index := fmt.Sprintf("%s/%s", workspaceId, connectionName)
 	if connectionCache == nil || refreshCache {
@@ -101,6 +113,37 @@ func (c DataArtsClient) GetWorkspaceFromName(instanceId, workspaceName string, r
 		return &workspace, nil
 	}
 	return nil, fmt.Errorf("workspace name '%s' not found", workspaceName)
+}
+
+func (c DataArtsClient) UpdateHetuConnection(
+	workspaceId string,
+	connection *model.ShowDataconnectionResponse,
+	hetuConfigDev, hetuConfigProd *any,
+) error {
+	voDev := model.ApigDataSourceVo{
+		DwName:         *connection.DwName,
+		DwType:         *connection.DwType,
+		DwConfig:       hetuConfigDev,
+		Description:    connection.Description,
+		DwCategory:     connection.DwCatagory,
+		AgentId:        connection.AgentId,
+		AgentName:      connection.AgentName,
+		EnvType:        &EnvTypeDev,
+		SupportService: &SupportServiceDefault,
+	}
+	voProd := voDev
+	voProd.DwConfig = hetuConfigProd
+	voProd.EnvType = &EnvTypeProd
+
+	req := &model.UpdateDataconnectionRequest{}
+	req.Workspace = workspaceId
+	req.DataConnectionId = *connection.DwId
+	req.Body = &model.ApigDataSourcesVo{}
+	req.Body.Mode = &CreateConnectionsRequestBodyModeDefault
+	req.Body.Visible = &CreateConnectionsRequestBodyVisibleDefault
+	req.Body.DataSourceVos = &[]model.ApigDataSourceVo{voDev, voProd}
+	_, err := c.UpdateDataconnection(req)
+	return err
 }
 
 func NewClient(ak, sk, token, regionId string) (*DataArtsClient, error) {

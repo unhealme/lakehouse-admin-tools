@@ -55,7 +55,7 @@ func main() {
 			subArgs.InstanceId = cfg.DataArts.InstanceId
 			subArgs.DataArtsClient = dasClient
 			subArgs.IamClient = iamClient
-			subArgs.HetuConfig = &cfg.DataArts.HetuConfig
+			subArgs.HetuConfig = cfg.DataArts.HetuConfig
 			if subArgs.AgentId == "" {
 				subArgs.AgentId = cfg.DataArts.Agent.Id
 			}
@@ -64,6 +64,14 @@ func main() {
 			}
 
 			cmd.DataArtsCreateHetuConnection(logger, subArgs)
+		case args.DataArts.UpdateHetuConnection != nil:
+			subArgs := args.DataArts.UpdateHetuConnection
+			subArgs.DomainId = cfg.DomainId
+			subArgs.InstanceId = cfg.DataArts.InstanceId
+			subArgs.DataArtsClient = dasClient
+			subArgs.HetuConfig = cfg.DataArts.HetuConfig
+
+			cmd.DataArtsUpdateHetuConnection(logger, subArgs)
 		}
 	case args.Mrs != nil:
 		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)

@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"maps"
-	"os"
 	"runtime"
 	"slices"
 	"strings"
@@ -19,6 +18,7 @@ type DataArtsAgent struct {
 
 type DataArtsArguments struct {
 	CreateHetuConnection *cmd.DataArtsCreateHetuConnectionArgs `arg:"subcommand:create-hetu-connection" yaml:"-"`
+	UpdateHetuConnection *cmd.DataArtsUpdateHetuConnectionArgs `arg:"subcommand:update-hetu-connection" yaml:"-"`
 
 	Agent      *DataArtsAgent    `arg:"-"`
 	HetuConfig dataarts.DwConfig `arg:"-" yaml:"hetu_config"`
@@ -83,14 +83,14 @@ type Arguments struct {
 }
 
 func (Arguments) Epilogue() string {
-	var b strings.Builder
-	fmt.Fprintln(&b, "Components:")
+	b := &strings.Builder{}
+	fmt.Fprintln(b, "Components:")
 	for _, comp := range slices.Sorted(maps.Keys(compVer)) {
-		fmt.Fprintf(&b, "  %s %s\n", comp, compVer[comp])
+		fmt.Fprintf(b, "  %-32s %s\n", comp, compVer[comp])
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
 
 func (Arguments) Version() string {
-	return fmt.Sprintf("%s %s (%s-%s)", os.Args[0], Version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("lakehouse-admin-tools %s (%s-%s)\n", Version, runtime.GOOS, runtime.GOARCH)
 }

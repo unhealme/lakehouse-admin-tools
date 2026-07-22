@@ -14,17 +14,6 @@ import (
 
 const MrsListHetuTenantsVersion = "2026.07.07-0"
 
-var headerRow = []string{
-	"Time",
-	"Tenant",
-	"Ids",
-	"Vcores",
-	"Memory",
-	"Running",
-	"Stopped",
-	"Error",
-}
-
 func MrsListHetuTenants(logger *pterm.Logger, args *MrsListHetuTenantsArgs) {
 	logger.Debug("using list tenants args.", logger.Args(internal.ToArgs(*args)...))
 
@@ -62,12 +51,23 @@ func MrsListHetuTenants(logger *pterm.Logger, args *MrsListHetuTenantsArgs) {
 	writer := csv.NewWriter(outFile)
 	defer writer.Flush()
 	if !args.NoHeader {
-		writer.Write(headerRow)
+		if err := writer.Write([]string{
+			"Time",
+			"Tenant",
+			"Ids",
+			"Vcores",
+			"Memory",
+			"Running",
+			"Stopped",
+			"Error",
+		}); err != nil {
+			panic(err)
+		}
 	}
 	now := time.Now().In(time.FixedZone("UTC+7", 7*3600))
 	now = now.Add(-time.Duration(now.Minute()) * time.Minute).Add(-time.Duration(now.Second()) * time.Second)
 	for tenant := range hetuClient.IterTenantInfo(logger) {
-		writer.Write([]string{
+		if err := writer.Write([]string{
 			strconv.FormatInt(now.Unix(), 10),
 			tenant.Tenant,
 			strings.Join(tenant.ClusterIds, ", "),
@@ -76,6 +76,8 @@ func MrsListHetuTenants(logger *pterm.Logger, args *MrsListHetuTenantsArgs) {
 			strconv.FormatInt(int64(tenant.RunningCount), 10),
 			strconv.FormatInt(int64(tenant.StoppedCount), 10),
 			strconv.FormatInt(int64(tenant.ErrorCount), 10),
-		})
+		}); err != nil {
+			panic(err)
+		}
 	}
 }

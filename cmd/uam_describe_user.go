@@ -63,7 +63,7 @@ func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
 	if printFmt == uam.PrintFormatCSV {
 		csvWriter = csv.NewWriter(outFile)
 		if !args.NoHeader {
-			csvWriter.Write(
+			if err := csvWriter.Write(
 				[]string{
 					"name",
 					"username",
@@ -79,7 +79,9 @@ func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
 					"lockoutTime",
 					"pwdLastSet",
 					"lastLogon",
-				})
+				}); err != nil {
+				panic(err)
+			}
 		}
 		defer csvWriter.Flush()
 	}

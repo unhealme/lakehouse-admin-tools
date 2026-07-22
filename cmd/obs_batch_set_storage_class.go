@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"iter"
 	rand "math/rand/v2"
 	"os"
@@ -19,6 +18,13 @@ import (
 )
 
 const ObsBatchSetStorageClassVersion = "2026.06.22-0"
+
+type ObsBatchSetStorageClassInput struct {
+	Path        string
+	DateRange   internal.DateRangeParsed `yaml:"date-range"`
+	TargetClass obs.StorageClassType     `yaml:"target-class"`
+	Exclude     []string
+}
 
 func ObsBatchSetStorageClass(logger *pterm.Logger, args *ObsBatchSetStorageClassArgs) {
 	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
@@ -47,23 +53,23 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 	}
 	actualRun := func(key string) {
 		if !args.DryRun {
-			processSetStorageClass(logger, args.ObsClient, inputPath.Bucket, key, input.TargetClass, args.NoProg, args.Concurrency)
+			processSetStorageClass(logger, args.ObsClient, inputPath.WithKey(key), input.TargetClass, args.NoProg, args.Concurrency)
 		} else {
-			logger.Info("setting storage class for object.", logger.Args("path", fmt.Sprintf("obs://%s/%s", inputPath.Bucket, key), "class", input.TargetClass))
+			logger.Info("setting storage class for object.", logger.Args("path", inputPath.WithKey(key).URI(), "class", input.TargetClass))
 			time.Sleep(200 + rand.N(300*time.Millisecond))
 		}
 	}
 
-	var parents iter.Seq[obs.ObsPath]
+	var parents iter.Seq[obs.ObsPathContent]
 	dR := input.DateRange
-	if dR.Kind != DateRangeArray {
+	if dR.Kind != internal.DateRangeArray {
 		excludes := internal.SliceToSet(input.Exclude)
-		parents = func(yield func(obs.ObsPath) bool) {
+		parents = func(yield func(obs.ObsPathContent) bool) {
 			if !strings.HasSuffix(inputPath.Key, "/") {
 				inputPath.Key += "/"
 			}
-			for p := range args.ObsClient.Walk(logger, inputPath.Bucket, inputPath.Key, 1, true) {
-				if _, skip := excludes[p.Name]; !skip {
+			for p := range args.ObsClient.Walk(logger, *inputPath, 1, true) {
+				if _, skip := excludes[p.Name()]; !skip {
 					if !yield(p) {
 						return
 					}
@@ -73,10 +79,10 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 	}
 
 	switch dR.Kind {
-	case DateRangeConstraint:
+	case internal.DateRangeConstraint:
 		for par := range parents {
 			var parsed time.Time
-			if err := internal.ParseStrftime(par.Name, dR.Format, &parsed); err != nil {
+			if err := internal.ParseStrftime(par.Name(), dR.Format, &parsed); err != nil {
 				logger.Warn("unable to parse path date. skipping..", logger.Args("path", par.Key, "format", dR.Format, "error", err))
 				continue
 			}
@@ -84,39 +90,39 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 				actualRun(par.Key)
 			}
 		}
-	case DateRangePattern:
+	case internal.DateRangePattern:
 		for par := range parents {
-			if match, _ := filepath.Match(dR.Pattern, par.Name); match {
+			if match, _ := filepath.Match(dR.Pattern, par.Name()); match {
 				actualRun(par.Key)
 			}
 		}
-	case DateRangeRegex:
+	case internal.DateRangeRegex:
 		re, err := regexp.Compile(dR.Regex)
 		if err != nil {
 			logger.Fatal("unable to compile regex pattern.", logger.Args("pattern", dR.Regex, "error", err))
 		}
 		for par := range parents {
-			if re.MatchString(par.Name) {
+			if re.MatchString(par.Name()) {
 				actualRun(par.Key)
 			}
 		}
-	case DateRangeArray:
+	case internal.DateRangeArray:
 		for _, base := range dR.Array {
 			actualRun(path.Join(inputPath.Key, base))
 		}
 	}
 }
 
-func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, bucket string, parent string, storageClass obs.StorageClassType, noProg bool, concurrency int) {
-	if !strings.HasSuffix(parent, "/") {
-		parent += "/"
+func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, basePath obs.ObsPath, storageClass obs.StorageClassType, noProg bool, concurrency int) {
+	if !strings.HasSuffix(basePath.Key, "/") {
+		basePath.Key += "/"
 	}
-	walker := obsClient.Walk(logger, bucket, parent, -1, false)
+	walker := obsClient.Walk(logger, basePath, -1, false)
 	if noProg {
 		internal.ParallelMap(
-			func(path obs.ObsPath) {
+			func(path obs.ObsPathContent) {
 				if !path.IsDir() {
-					obsClient.SetStorageClass(logger, bucket, path.Key, storageClass)
+					obsClient.SetStorageClass(logger, basePath.WithKey(path.Key), storageClass)
 				}
 			},
 			walker,
@@ -135,7 +141,7 @@ func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, buck
 		defer prog.Stop()
 		internal.ParallelMap(
 			func(key string) {
-				obsClient.SetStorageClass(logger, bucket, key, storageClass)
+				obsClient.SetStorageClass(logger, basePath.WithKey(key), storageClass)
 				prog.Increment()
 			},
 			slices.Values(keys),

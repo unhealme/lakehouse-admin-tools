@@ -11,17 +11,18 @@ var (
 )
 
 type DwConfig struct {
-	Manually             bool   `json:"manually"`
-	ClusterId            string `json:"clusterId"`
-	ClusterName          string `json:"clusterName"`
-	DbUserName           string `json:"dbUserName"`
-	DbPassword           string `json:"dbPassword"`
-	RememberPassword     bool   `json:"rememberPassword"`
-	KmsId                string `json:"kmsId"`
-	KmsName              string `json:"kmsName"`
-	HsBrokerIps          string `json:"hsBrokerIps"`
-	HsBrokerPort         string `json:"hsBrokerPort"`
-	CdmPropertyEnable    bool   `json:"cdmPropertyEnable"`
-	EnableRealtimeSync   bool   `json:"metadata.enableRealtimeSync"`
-	EnableAutoCollection bool   `json:"metadata.enableAutoCollection"`
+	Manually             *bool   `json:"manually,omitempty"`
+	ClusterId            *string `json:"clusterId,omitempty"`
+	ClusterName          *string `json:"clusterName,omitempty"`
+	DbUserName           *string `json:"dbUserName,omitempty"`
+	DbPassword           *string `json:"dbPassword"`
+	RememberPassword     *bool   `json:"rememberPassword,omitempty"`
+	KmsId                *string `json:"kmsId,omitempty"`
+	KmsName              *string `json:"kmsName,omitempty"`
+	HsBrokerIps          *string `json:"hsBrokerIps,omitempty"`
+	HsBrokerPort         *string `json:"hsBrokerPort,omitempty"`
+	Properties           *string `json:"properties,omitempty"`
+	CdmPropertyEnable    *bool   `json:"cdmPropertyEnable,omitempty"`
+	EnableRealtimeSync   *bool   `json:"metadata.enableRealtimeSync,omitempty"`
+	EnableAutoCollection *bool   `json:"metadata.enableAutoCollection,omitempty"`
 }

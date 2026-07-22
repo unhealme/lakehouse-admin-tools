@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	rand "math/rand/v2"
 	"path"
 	"slices"
@@ -13,9 +12,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-const ObsBatchRenameVersion = "2026.06.22-0"
-
-type pathToRename struct{ before, after string }
+const ObsBatchRenameVersion = "2026.07.11-0"
 
 func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
@@ -24,12 +21,17 @@ func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
 		logger.Warn("skipping input due to error.", logger.Args("path", args.Path, "error", err))
 		return
 	}
+
+	type pathToRename struct {
+		before   obs.ObsPath
+		keyAfter string
+	}
 	var paths []pathToRename
 	var total int
-	for op := range args.ObsClient.Walk(logger, inputPath.Bucket, inputPath.Key, 1, args.DirOnly) {
-		if base, _ := strings.CutPrefix(op.Key, inputPath.Key); len(base) > 0 && !strings.HasPrefix(base, args.Prefix) {
-			after := path.Join(inputPath.Key, args.Prefix+base)
-			paths = append(paths, pathToRename{op.Key, after})
+	for op := range args.ObsClient.Walk(logger, *inputPath, 1, args.DirOnly) {
+		if base := strings.TrimPrefix(op.Key, inputPath.Key); len(base) > 0 && !strings.HasPrefix(base, args.Prefix) {
+			before := obs.NewObsPath(op.Bucket, op.Key)
+			paths = append(paths, pathToRename{before, path.Join(inputPath.Key, args.Prefix+base)})
 			total += 1
 		}
 	}
@@ -44,9 +46,9 @@ func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
 		internal.ParallelMap(
 			func(path pathToRename) {
 				if !args.DryRun {
-					args.ObsClient.RenameObject(logger, inputPath.Bucket, path.before, path.after)
+					args.ObsClient.RenameObject(logger, path.before, path.keyAfter)
 				} else {
-					logger.Info("renaming directory.", logger.Args("before", fmt.Sprintf("obs://%s/%s", inputPath.Bucket, path.before), "after", fmt.Sprintf("obs://%s/%s", inputPath.Bucket, path.after)))
+					logger.Info("renaming directory.", logger.Args("before", path.before.URI(), "after", path.before.WithKey(path.keyAfter).URI()))
 					time.Sleep(200 + rand.N(300*time.Millisecond))
 				}
 				if prog != nil {

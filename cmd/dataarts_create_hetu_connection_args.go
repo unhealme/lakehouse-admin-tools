@@ -14,5 +14,5 @@ type DataArtsCreateHetuConnectionArgs struct {
 	InstanceId     string                   `arg:"-"`
 	DataArtsClient *dataarts.DataArtsClient `arg:"-"`
 	IamClient      *iam.IamClient           `arg:"-"`
-	HetuConfig     *dataarts.DwConfig       `arg:"-"`
+	HetuConfig     dataarts.DwConfig        `arg:"-"`
 }

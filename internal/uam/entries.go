@@ -68,7 +68,7 @@ func PrintDefault(entry *ldap.Entry, groupBase string, writer *os.File) {
 
 func PrintCSV(entry *ldap.Entry, groupBase string, writer *csv.Writer) {
 	// name,username,mail,department,directorate,divisionGroup,division,group,distinguishedName,badPwdCount,badPasswordTime,lockoutTime,pwdLastSet,lastLogon
-	writer.Write([]string{
+	if err := writer.Write([]string{
 		entry.GetAttributeValue("name"),
 		entry.GetAttributeValue("sAMAccountName"),
 		entry.GetAttributeValue("mail"),
@@ -83,5 +83,7 @@ func PrintCSV(entry *ldap.Entry, groupBase string, writer *csv.Writer) {
 		parseTime(entry.GetAttributeValue("lockoutTime")),
 		parseTime(entry.GetAttributeValue("pwdLastSet")),
 		parseTime(entry.GetAttributeValue("lastLogon")),
-	})
+	}); err != nil {
+		panic(err)
+	}
 }

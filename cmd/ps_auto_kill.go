@@ -90,7 +90,7 @@ func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
 			memInfo.RSS > uint64(memoryThreshold) {
 			wg.Go(func() {
 				if !args.DryRun {
-					if err := softKill(p); err != nil {
+					if err := internal.SoftKill(p); err != nil {
 						logger.Warn("failed to kill process.", logArgs)
 						return
 					}
@@ -100,26 +100,4 @@ func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
 		}
 	}
 	wg.Wait()
-}
-
-func softKill(process *process.Process) error {
-	if running, _ := process.IsRunning(); running {
-		if err := process.Terminate(); err != nil {
-			return err
-		}
-	} else {
-		return nil
-	}
-	for i := 1; i <= 15; i++ {
-		if running, _ := process.IsRunning(); !running {
-			return nil
-		}
-		time.Sleep(1 * time.Second)
-	}
-	if running, _ := process.IsRunning(); running {
-		if err := process.Kill(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
