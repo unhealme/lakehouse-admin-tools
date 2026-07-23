@@ -73,6 +73,21 @@ func main() {
 
 			cmd.DataArtsUpdateHetuConnection(logger, subArgs)
 		}
+	case args.Iam != nil:
+		logger.Debug("creating IAM client.")
+		iamClient, err := iam.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
+		if err != nil {
+			logger.Fatal("unable to create IAM client.", logger.Args("error", err))
+		}
+
+		switch {
+		case args.Iam.ListUsers != nil:
+			subArgs := args.Iam.ListUsers
+			subArgs.DomainId = cfg.DomainId
+			subArgs.IamClient = iamClient
+
+			cmd.IamListUsers(logger, subArgs)
+		}
 	case args.Mrs != nil:
 		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
 		if err != nil {

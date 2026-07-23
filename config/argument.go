@@ -11,18 +11,20 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
 )
 
-type DataArtsAgent struct {
-	Id   string `arg:"-"`
-	Name string `arg:"-"`
-}
-
 type DataArtsArguments struct {
 	CreateHetuConnection *cmd.DataArtsCreateHetuConnectionArgs `arg:"subcommand:create-hetu-connection" yaml:"-"`
 	UpdateHetuConnection *cmd.DataArtsUpdateHetuConnectionArgs `arg:"subcommand:update-hetu-connection" yaml:"-"`
 
-	Agent      *DataArtsAgent    `arg:"-"`
+	Agent *struct {
+		Id   string
+		Name string
+	} `arg:"-"`
 	HetuConfig dataarts.DwConfig `arg:"-" yaml:"hetu_config"`
 	InstanceId string            `arg:"-i,--" placeholder:"INSTANCE_ID" yaml:"instance_id"`
+}
+
+type IamArguments struct {
+	ListUsers *cmd.IamListUsersArgs `arg:"subcommand:list-users" yaml:"-"`
 }
 
 type MrsArguments struct {
@@ -66,6 +68,7 @@ type YarnArguments struct {
 
 type Arguments struct {
 	DataArts *DataArtsArguments `arg:"subcommand:dataarts"`
+	Iam      *IamArguments      `arg:"subcommand:iam"`
 	Mrs      *MrsArguments      `arg:"subcommand:mrs"`
 	Obs      *ObsArguments      `arg:"subcommand:obs"`
 	Ps       *PsArguments       `arg:"subcommand:ps" yaml:"-"`

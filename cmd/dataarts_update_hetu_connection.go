@@ -58,33 +58,28 @@ func DataArtsUpdateHetuConnection(logger *pterm.Logger, args *DataArtsUpdateHetu
 		}
 
 		hetuConfDev := args.HetuConfig
-		emptyBool := false
-		hetuConfDev.RememberPassword = &emptyBool
+		hetuConfDev.RememberPassword = new(false)
 		hetuConfProd := hetuConfDev
 
 		if tenantDev != "" {
 			prop := configProperties
 			prop["tenant"] = tenantDev
 			propEncoded, _ := json.Marshal(prop)
-			propEncodedStr := string(propEncoded)
-			hetuConfDev.Properties = &propEncodedStr
+			hetuConfDev.Properties = new(string(propEncoded))
 		}
 
 		if tenantProd != "" {
 			prop := configProperties
 			prop["tenant"] = tenantProd
 			propEncoded, _ := json.Marshal(prop)
-			propEncodedStr := string(propEncoded)
-			hetuConfProd.Properties = &propEncodedStr
+			hetuConfProd.Properties = new(string(propEncoded))
 		}
 
 		logger.Debug("trying to update hetu connection.", logArgs(nil))
-		hetuConfDevInter := any(hetuConfDev)
-		hetuConfProdInter := any(hetuConfProd)
 		hetuConfDevEncoded, _ := json.Marshal(hetuConfDev)
 		hetuConfProdEncoded, _ := json.Marshal(hetuConfProd)
 		logger.Debug("using hetu config.", logArgs(nil), logger.Args("devConfig", string(hetuConfDevEncoded), "prodConfig", string(hetuConfProdEncoded)))
-		if err := args.DataArtsClient.UpdateHetuConnection(*workspace.Id, connection, &hetuConfDevInter, &hetuConfProdInter); err != nil {
+		if err := args.DataArtsClient.UpdateHetuConnection(*workspace.Id, connection, new(any(hetuConfDev)), new(any(hetuConfProd))); err != nil {
 			logger.Warn("unable to update hetu connection.", logArgs(err))
 		} else {
 			logger.Info("successfully updated hetu connection.", logArgs(nil))

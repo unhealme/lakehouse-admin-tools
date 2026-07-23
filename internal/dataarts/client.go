@@ -81,7 +81,7 @@ func (c DataArtsClient) GetConnectionFromName(workspaceId, connectionName string
 		if err != nil {
 			return nil, err
 		}
-		connectionCache = make(map[string]model.ApigDataSourceView)
+		connectionCache = make(map[string]model.ApigDataSourceView, len(*resp.DataConnectionLists))
 		for _, conn := range *resp.DataConnectionLists {
 			if conn.DwName != nil {
 				connectionCache[index] = conn
@@ -102,7 +102,7 @@ func (c DataArtsClient) GetWorkspaceFromName(instanceId, workspaceName string, r
 		if err != nil {
 			return nil, err
 		}
-		workspaceCache = make(map[string]model.Workspacebody)
+		workspaceCache = make(map[string]model.Workspacebody, len(*resp.Data))
 		for _, workspace := range *resp.Data {
 			if workspace.Name != nil {
 				workspaceCache[*workspace.Name] = workspace

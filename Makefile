@@ -1,7 +1,13 @@
 prog = lakehouse-admin-tools
+version = debug
 
 build:
 	go build -o build/$(prog)
+
+bundle:
+	rm -f build/lakehouse-admin-tools-$(version).zip
+	grep -v '^#' lakehouse-admin-tools.conf | tr -s '\n' > build/lakehouse-admin-tools.conf
+	zip -j build/lakehouse-admin-tools-$(version).zip build/lakehouse-admin-tools.conf build/linux/$(prog) build/windows/$(prog).exe HOWTO.txt
 
 static: static-linux static-windows
 
