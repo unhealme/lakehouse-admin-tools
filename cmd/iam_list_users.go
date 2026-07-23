@@ -66,7 +66,7 @@ func IamListUsers(logger *pterm.Logger, args *IamListUsersArgs) {
 	})
 
 	var prog *pterm.ProgressbarPrinter
-	if !args.NoProg {
+	if !args.NoProg && args.OutputFile != "" {
 		prog, _ = internal.NewProgressBar().WithTitle("Listing users").WithTotal(len(users)).Start()
 	}
 
