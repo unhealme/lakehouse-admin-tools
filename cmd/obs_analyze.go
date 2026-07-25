@@ -11,7 +11,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-const ObsAnalyzeVersion = "2026.07.22-0"
+const ObsAnalyzeVersion = "2026.07.25-0"
 
 func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -19,18 +19,17 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 		logger.Fatal("unable to write csv and json output to the same file.")
 	}
 
-	var outputWriter utils.OutputWriter
 	if args.CsvOut != "" {
-		if err := outputWriter.OpenCsvWriter(args.CsvOut); err != nil {
+		if err := utils.OpenCsvWriter(args.CsvOut); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
 	if args.JsonOut != "" {
-		if err := outputWriter.OpenJsonWriter(args.JsonOut); err != nil {
+		if err := utils.OpenJsonWriter(args.JsonOut); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
-	defer outputWriter.Close()
+	defer utils.CloseOutput()
 
 	type resultPath struct {
 		raw    *obs.ObsPath
@@ -80,7 +79,7 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 			stats := <-key.result
 			if stats.Exists {
 				pathExists = true
-				outputWriter.Write(stats)
+				utils.WriteOutput(stats)
 				totalSize.Add(stats.Size)
 				totalDirs.Add(int64(stats.DirCount))
 				totalFiles.Add(int64(stats.FileCount))

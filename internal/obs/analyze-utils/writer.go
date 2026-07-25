@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bufio"
 	"encoding/csv"
 	"io"
 	"os"
@@ -13,54 +14,55 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 )
 
-type OutputWriter struct {
-	csvWriter *csv.Writer
+var (
 	csvFile   io.WriteCloser
-	jsonFile  io.WriteCloser
+	csvWriter *csv.Writer
 
-	printCsvHeaderOnce sync.Once
-}
+	jsonFile   io.WriteCloser
+	jsonWriter *bufio.Writer
+)
 
-func (w *OutputWriter) printCsvHeader() {
-	w.printCsvHeaderOnce.Do(func() {
-		if err := w.csvWriter.Write([]string{
-			"Path",
-			"Size",
-			"SizeFormatted",
-			"DirCount",
-			"FileCount",
-		}); err != nil {
-			panic(err)
-		}
-	})
-}
-
-func (w *OutputWriter) Close() {
-	if w.csvWriter != nil {
-		w.csvWriter.Flush()
-		w.csvFile.Close()
+var printCsvHeader = sync.OnceFunc(func() {
+	if err := csvWriter.Write([]string{
+		"ObsPath",
+		"RawSize",
+		"Size",
+		"DirCount",
+		"FileCount",
+	}); err != nil {
+		panic(err)
 	}
-	if w.jsonFile != nil {
-		w.jsonFile.Close()
-	}
-}
+})
 
-func (w *OutputWriter) OpenCsvWriter(file string) (err error) {
-	if w.csvFile, err = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644); err == nil {
-		w.csvWriter = csv.NewWriter(w.csvFile)
+func OpenCsvWriter(file string) (err error) {
+	if csvFile, err = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644); err == nil {
+		csvWriter = csv.NewWriter(csvFile)
 	}
 	return
 }
 
-func (w *OutputWriter) OpenJsonWriter(file string) (err error) {
-	w.jsonFile, err = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+func OpenJsonWriter(file string) (err error) {
+	if jsonFile, err = os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644); err == nil {
+		jsonWriter = bufio.NewWriter(jsonFile)
+	}
 	return
 }
 
-func (w *OutputWriter) Write(stats obs.ObsPathAnalyzed) {
-	if w.csvWriter != nil {
-		w.printCsvHeader()
-		if err := w.csvWriter.Write([]string{
+func CloseOutput() {
+	if csvWriter != nil {
+		csvWriter.Flush()
+		csvFile.Close()
+	}
+	if jsonWriter != nil {
+		jsonWriter.Flush()
+		jsonFile.Close()
+	}
+}
+
+func WriteOutput(stats obs.ObsPathAnalyzed) {
+	if csvWriter != nil {
+		printCsvHeader()
+		if err := csvWriter.Write([]string{
 			stats.URI(),
 			strconv.FormatInt(stats.Size, 10),
 			internal.FormatSize(stats.Size),
@@ -70,9 +72,9 @@ func (w *OutputWriter) Write(stats obs.ObsPathAnalyzed) {
 			panic(err)
 		}
 	}
-	if w.jsonFile != nil {
+	if jsonWriter != nil {
 		statsJson, _ := json.Marshal(stats)
-		if _, err := w.jsonFile.Write(append(statsJson, '\n')); err != nil {
+		if _, err := jsonWriter.Write(append(statsJson, '\n')); err != nil {
 			panic(err)
 		}
 	}

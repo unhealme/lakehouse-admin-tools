@@ -29,11 +29,11 @@ func (p ObsPath) URI() string {
 }
 
 func (p ObsPath) WithKey(key string) ObsPath {
-	return NewObsPath(p.Bucket, key)
+	return NewObsPath(p.Bucket, strings.TrimPrefix(key, "/"))
 }
 
 func NewObsPath(bucket, key string) ObsPath {
-	return ObsPath{bucket, key}
+	return ObsPath{bucket, strings.TrimPrefix(key, "/")}
 }
 
 func PathFromURI(uri string) (*ObsPath, error) {
@@ -53,7 +53,7 @@ type ObsPathContent struct {
 func NewObsPathContent(depth int, bucket, key string, content *obs.Content) ObsPathContent {
 	v := ObsPathContent{Depth: depth, Content: content}
 	v.Bucket = bucket
-	v.Key = key
+	v.Key = strings.TrimPrefix(key, "/")
 	return v
 }
 
