@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/config"
 	"github.com/jcmturner/gokrb5/v8/credentials"

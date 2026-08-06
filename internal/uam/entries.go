@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-ldap/ldap/v3"
+	ldap "github.com/go-ldap/ldap/v3"
 )
 
 const defaultFmt = "%-18s : %s\n"

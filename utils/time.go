@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itchyny/timefmt-go"
+	timefmt "github.com/itchyny/timefmt-go"
 )
 
 func ParseStrftime(rawDt, format string) (t *time.Time, e error) {

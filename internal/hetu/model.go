@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 )
 
 type HetuAuth struct {

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
 	"github.com/unhealme/lakehouse-admin-tools/utils"

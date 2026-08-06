@@ -3,7 +3,7 @@ package cmd
 import (
 	"os"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"

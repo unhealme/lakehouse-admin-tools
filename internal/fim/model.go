@@ -1,6 +1,6 @@
 package fim
 
-import "github.com/goccy/go-json"
+import json "github.com/goccy/go-json"
 
 type Clusters []Cluster
 
