@@ -18,6 +18,26 @@ type IamClient struct {
 	IamV5 *iam_v5.IamClient
 }
 
+func (c IamClient) GetGroups(domainId string, refreshCache bool) (groups []*model_v3.KeystoneGroupResult, err error) {
+	if groupCache == nil || refreshCache {
+		req := &model_v3.KeystoneListGroupsRequest{DomainId: &domainId}
+		resp, err := c.IamV3.KeystoneListGroups(req)
+		if err != nil {
+			return nil, err
+		}
+		groupCache = make(map[string]model_v3.KeystoneGroupResult, len(*resp.Groups))
+		for _, group := range *resp.Groups {
+			groupCache[group.Name] = group
+			groups = append(groups, &group)
+		}
+		return groups, nil
+	}
+	for _, group := range groupCache {
+		groups = append(groups, &group)
+	}
+	return
+}
+
 func (c IamClient) GetUser(domainId, userName string, refreshCache bool) (*model_v3.KeystoneListUsersResult, error) {
 	if userCache == nil || refreshCache {
 		req := &model_v3.KeystoneListUsersRequest{DomainId: &domainId}

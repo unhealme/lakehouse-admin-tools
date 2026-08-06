@@ -12,23 +12,25 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/shirou/gopsutil/v4/process"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
 const PsAutoKillVersion = "2026.06.30-1"
 
-func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
+func PsAutoKill(logger *pterm.Logger, args *args.PsAutoKillArgs) {
 	logger.Debug("using auto kill args.", logger.Args(internal.ToArgs(*args)...))
 	procs, err := process.Processes()
 	if err != nil {
 		logger.Fatal("unable to list processes", logger.Args("error", err))
 	}
-	memoryThreshold, err := internal.ParseSize(args.MemoryThreshold)
+	memoryThreshold, err := utils.ParseSize(args.MemoryThreshold)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
 	excludeUsersArgs := strings.Split(args.ExcludeUsers, ",")
-	excludeUsers := make(map[uint32]internal.EmptyType, len(excludeUsersArgs))
+	excludeUsers := make(map[uint32]utils.EmptyType, len(excludeUsersArgs))
 	for _, excludeUser := range excludeUsersArgs {
 		var uid uint64
 		if u, err := user.Lookup(excludeUser); err != nil {
@@ -40,7 +42,7 @@ func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
 				continue
 			}
 		}
-		excludeUsers[uint32(uid)] = internal.Empty
+		excludeUsers[uint32(uid)] = utils.Empty
 	}
 	logger.Debug(fmt.Sprintf("user to exclude: %v", slices.Collect(maps.Keys(excludeUsers))))
 	var wg sync.WaitGroup
@@ -80,7 +82,7 @@ func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
 		logArgs := logger.Args(
 			"pid", p.Pid,
 			"createTime", time.UnixMilli(createTime),
-			"rss", internal.FormatSize(int64(memInfo.RSS)),
+			"rss", utils.FormatSize(int64(memInfo.RSS)),
 			"percMem", fmt.Sprintf("%2.1f%%", memPerc),
 			"user", userName,
 			"cmd", cmdLine,
@@ -90,7 +92,7 @@ func PsAutoKill(logger *pterm.Logger, args *PsAutoKillArgs) {
 			memInfo.RSS > uint64(memoryThreshold) {
 			wg.Go(func() {
 				if !args.DryRun {
-					if err := internal.SoftKill(p); err != nil {
+					if err := utils.SoftKill(p); err != nil {
 						logger.Warn("failed to kill process.", logArgs)
 						return
 					}

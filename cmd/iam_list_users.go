@@ -6,16 +6,18 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	model "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/iam/v3/model"
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const IamListUsersVersion = "2026.07.23-0"
+const IamListUsersVersion = "2026.08.05-0"
 
-func IamListUsers(logger *pterm.Logger, args *IamListUsersArgs) {
+func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 	logger.Debug("using iam list users args.", logger.Args(internal.ToArgs(*args)...))
 
 	outFile := os.Stdout
@@ -31,6 +33,13 @@ func IamListUsers(logger *pterm.Logger, args *IamListUsersArgs) {
 		defer outFile.Close()
 	}
 	csvWriter := csv.NewWriter(outFile)
+	defer csvWriter.Flush()
+
+	users, err := args.IamClient.GetUsers(args.DomainId, true)
+	if err != nil {
+		logger.Fatal("unable to list IAM users.", logger.Args("error", err))
+	}
+
 	if !args.NoHeader {
 		if err := csvWriter.Write(
 			[]string{
@@ -45,79 +54,60 @@ func IamListUsers(logger *pterm.Logger, args *IamListUsersArgs) {
 			panic(err)
 		}
 	}
-	defer csvWriter.Flush()
-
-	users, err := args.IamClient.GetUsers(args.DomainId, true)
-	if err != nil {
-		logger.Fatal("unable to list IAM users.", logger.Args("error", err))
-	}
-
-	results := make([]chan []string, len(users))
-	for i := range results {
-		results[i] = make(chan []string)
-	}
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		for _, r := range results {
-			if err := csvWriter.Write(<-r); err != nil {
-				panic(err)
-			}
-		}
-	})
 
 	var prog *pterm.ProgressbarPrinter
 	if !args.NoProg && args.OutputFile != "" {
-		prog, _ = internal.NewProgressBar().WithTitle("Listing users").WithTotal(len(users)).Start()
+		prog, _ = utils.NewProgressBar().WithTitle("Listing users").WithTotal(len(users)).Start()
 	}
 
-	sem := make(chan internal.EmptyType, max(args.Concurrency, 1))
-	for i, user := range users {
-		sem <- internal.Empty
-		wg.Go(func() {
-			lastLogin, err := args.IamClient.GetUserLastLogin(user.Id)
-			if err != nil {
-				logger.Warn("unable to get user last login.", logger.Args("user", user.Name, "error", err))
-			}
-			var lastLoginStr string
-			if lastLogin != nil {
-				lastLoginStr = lastLogin.Local().Format(time.DateTime)
-			}
+	serializeIamUser := func(user *model.KeystoneListUsersResult) []string {
+		lastLogin, err := args.IamClient.GetUserLastLogin(user.Id)
+		if err != nil {
+			logger.Warn("unable to get user last login.", logger.Args("user", user.Name, "error", err))
+		}
+		var lastLoginStr string
+		if lastLogin != nil {
+			lastLoginStr = lastLogin.Local().Format(time.DateTime)
+		}
 
-			groups, err := args.IamClient.GetUserGroups(user.Id)
-			if err != nil {
-				logger.Warn("unable to get user groups.", logger.Args("user", user.Name, "error", err))
-			}
-			groupNames := make([]string, len(groups))
-			for i, group := range groups {
-				groupNames[i] = group.Name
-			}
-			slices.Sort(groupNames)
+		groups, err := args.IamClient.GetUserGroups(user.Id)
+		if err != nil {
+			logger.Warn("unable to get user groups.", logger.Args("user", user.Name, "error", err))
+		}
+		groupNames := make([]string, len(groups))
+		for i, group := range groups {
+			groupNames[i] = group.Name
+		}
+		slices.Sort(groupNames)
 
-			var desc string
-			if user.Description != nil {
-				desc = *user.Description
-			}
+		var desc string
+		if user.Description != nil {
+			desc = *user.Description
+		}
 
-			var accessMode string
-			if user.AccessMode != nil {
-				accessMode = *user.AccessMode
-			}
-			results[i] <- []string{
-				user.Name,
-				user.Id,
-				desc,
-				strconv.FormatBool(user.Enabled),
-				accessMode,
-				strings.Join(groupNames, ","),
-				lastLoginStr,
-			}
-			if prog != nil {
-				prog.Increment()
-			}
-			<-sem
-		})
+		var accessMode string
+		if user.AccessMode != nil {
+			accessMode = *user.AccessMode
+		}
+
+		if prog != nil {
+			prog.Increment()
+		}
+		return []string{
+			user.Name,
+			user.Id,
+			desc,
+			strconv.FormatBool(user.Enabled),
+			accessMode,
+			strings.Join(groupNames, ","),
+			lastLoginStr,
+		}
 	}
-	wg.Wait()
+	for result := range utils.ParallelMapOrdered(serializeIamUser, users, max(args.Concurrency, 1)) {
+		if err := csvWriter.Write(result); err != nil {
+			panic(err)
+		}
+	}
 	if prog != nil {
 		prog.Stop()
 	}

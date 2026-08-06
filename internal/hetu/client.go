@@ -1,51 +1,116 @@
 package hetu
 
 import (
-	"crypto/tls"
 	"fmt"
 	"iter"
-	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
+	req "github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
+	"github.com/tidwall/gjson"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
 type HetuClient struct {
-	Http    *http.Client
+	Http    *req.Client
 	HetuUrl *url.URL
 	HwToken string
 }
 
-func (c HetuClient) Close() {
-	c.Http.CloseIdleConnections()
+func (c *HetuClient) Close() {
+	c.Http.ClearCookies().CloseIdleConnections()
+	c.Http = nil
+	c.HwToken = ""
+}
+
+func (c HetuClient) Clusters(page int) (*ClustersResponse[ClusterContent], error) {
+	var clusters ClustersResponse[ClusterContent]
+	if _, err := c.Http.R().
+		SetQueryParam("size", "100").
+		SetQueryParam("page", strconv.FormatInt(int64(page), 10)).
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetSuccessResult(&clusters).
+		Get("/v1/hsconsole/clusters"); err != nil {
+		return nil, err
+	}
+	return &clusters, nil
+}
+
+func (c HetuClient) ClustersRaw() (*ClustersResponse[ClusterContentRaw], error) {
+	var (
+		allClusters ClustersResponse[ClusterContentRaw]
+
+		page  = 1
+		total = 0
+	)
+	for {
+		var clusters ClustersResponse[ClusterContentRaw]
+		if _, err := c.Http.R().
+			SetQueryParam("size", "100").
+			SetQueryParam("page", strconv.FormatInt(int64(page-1), 10)).
+			SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+			SetSuccessResult(&clusters).
+			Get("/v1/hsconsole/clusters"); err != nil {
+			continue
+		}
+		if page > 1 {
+			for _, cluster := range clusters.Content.Clusters {
+				allClusters.Content.Clusters = append(allClusters.Content.Clusters, cluster)
+				total++
+			}
+		} else {
+			allClusters = clusters
+		}
+		if total >= clusters.Content.Total {
+			break
+		}
+		page++
+	}
+	return &allClusters, nil
 }
 
 func (c *HetuClient) GetToken() error {
-	tokenUrl := c.HetuUrl.JoinPath("/v1/hsconsole/session/token")
-	tokenUrl.RawQuery = fmt.Sprintf("_=%d", time.Now().UnixMilli())
-	resp, err := c.Http.Get(tokenUrl.String())
+	resp, err := c.Http.R().
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		Get("/v1/hsconsole/session/token")
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return internal.HttpNotOkFromResponse(resp)
-	}
-	var token HetuToken
-	if err := json.NewDecoder(resp.Body).Decode(&token); err != nil {
-		return err
-	}
-	c.HwToken = token.Token
+	token := gjson.GetBytes(resp.Bytes(), "token").String()
+	c.Http.SetCommonHeader("X-HW-FI-Auth-Token", token)
+	c.HwToken = token
 	return nil
 }
 
-func (c HetuClient) IterTenantInfo(logger *pterm.Logger) iter.Seq[*Tenant] {
-	return func(yield func(*Tenant) bool) {
+func (c HetuClient) IterCluster(logger *pterm.Logger) iter.Seq[*Cluster] {
+	return func(yield func(*Cluster) bool) {
+		page := 1
+		total := 0
+		for {
+			clusters, err := c.Clusters(page - 1)
+			if err != nil {
+				logger.Error("unable to get clusters.", logger.Args("page", page, "error", err))
+				break
+			}
+			for _, cluster := range clusters.Content.Clusters {
+				if !yield(&cluster) {
+					return
+				}
+				total++
+			}
+			if total >= clusters.Content.Total {
+				break
+			}
+			page++
+		}
+	}
+}
+
+func (c HetuClient) IterTenantInfo(logger *pterm.Logger) iter.Seq[*TenantInfo] {
+	return func(yield func(*TenantInfo) bool) {
 		page := 1
 		total := 0
 		for {
@@ -68,34 +133,38 @@ func (c HetuClient) IterTenantInfo(logger *pterm.Logger) iter.Seq[*Tenant] {
 	}
 }
 
-func (c HetuClient) TenantInfo(page int) (*TenantInfo, error) {
-	reqUrl := c.HetuUrl.JoinPath("/v1/hsconsole/clusters/tenant_info")
-	reqQuery := reqUrl.Query()
-	reqQuery.Add("size", "100")
-	reqQuery.Add("page", strconv.FormatInt(int64(page), 10))
-	reqQuery.Add("_", strconv.FormatInt(time.Now().UnixMilli(), 10))
-	reqUrl.RawQuery = reqQuery.Encode()
-	req, err := http.NewRequest(http.MethodGet, reqUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("X-HW-FI-Auth-Token", c.HwToken)
-	resp, err := c.Http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	var tenantInfo TenantInfo
-	if err := json.NewDecoder(resp.Body).Decode(&tenantInfo); err != nil {
+func (c HetuClient) TenantInfo(page int) (*TenantInfoResponse, error) {
+	var tenantInfo TenantInfoResponse
+	if _, err := c.Http.R().
+		SetQueryParam("size", "100").
+		SetQueryParam("page", strconv.FormatInt(int64(page), 10)).
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetSuccessResult(&tenantInfo).
+		Get("/v1/hsconsole/clusters/tenant_info"); err != nil {
 		return nil, err
 	}
 	return &tenantInfo, nil
 }
 
+func (c HetuClient) TenantConfig(tenant string) (*TenantConfigResponse, error) {
+	var tenantConfig TenantConfigResponse
+	if _, err := c.Http.R().
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetSuccessResult(&tenantConfig).
+		Get(fmt.Sprintf("/v1/hsconsole/clusters/config/tenant/%s", tenant)); err != nil {
+		return nil, err
+	}
+	return &tenantConfig, nil
+}
+
 func NewClient(hetuAuth *HetuAuth) *HetuClient {
-	tr := http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	cookie, _ := cookiejar.New(nil)
-	cookie.SetCookies(hetuAuth.Url, []*http.Cookie{hetuAuth.SessionId})
-	httpClient := &http.Client{Transport: &tr, Jar: cookie}
+	httpClient := req.C().
+		DisableAutoDecode().
+		EnableInsecureSkipVerify().
+		OnAfterResponse(internal.HttpNotOkMiddleware).
+		SetBaseURL(hetuAuth.Url.String()).
+		SetCommonCookies(hetuAuth.SessionId).
+		SetJsonMarshal(json.Marshal).
+		SetJsonUnmarshal(json.Unmarshal)
 	return &HetuClient{Http: httpClient, HetuUrl: hetuAuth.Url}
 }

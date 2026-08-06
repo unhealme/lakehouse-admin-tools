@@ -5,31 +5,33 @@ import (
 	"sync"
 
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
-	utils "github.com/unhealme/lakehouse-admin-tools/internal/obs/analyze-utils"
+	analyze_utils "github.com/unhealme/lakehouse-admin-tools/internal/obs/analyze-utils"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 	"go.uber.org/atomic"
 )
 
 const ObsAnalyzeVersion = "2026.07.25-0"
 
-func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
+func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
 	if args.CsvOut != "" && args.CsvOut == args.JsonOut {
 		logger.Fatal("unable to write csv and json output to the same file.")
 	}
 
 	if args.CsvOut != "" {
-		if err := utils.OpenCsvWriter(args.CsvOut); err != nil {
+		if err := analyze_utils.OpenCsvWriter(args.CsvOut); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
 	if args.JsonOut != "" {
-		if err := utils.OpenJsonWriter(args.JsonOut); err != nil {
+		if err := analyze_utils.OpenJsonWriter(args.JsonOut); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
-	defer utils.CloseOutput()
+	defer analyze_utils.CloseOutput()
 
 	type resultPath struct {
 		raw    *obs.ObsPath
@@ -79,7 +81,7 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 			stats := <-key.result
 			if stats.Exists {
 				pathExists = true
-				utils.WriteOutput(stats)
+				analyze_utils.WriteOutput(stats)
 				totalSize.Add(stats.Size)
 				totalDirs.Add(int64(stats.DirCount))
 				totalFiles.Add(int64(stats.FileCount))
@@ -97,12 +99,12 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 
 	var prog *pterm.ProgressbarPrinter
 	if !args.NoProg {
-		prog, _ = internal.NewProgressBar().WithTitle("Analyzing paths").WithTotal(len(inputPaths)).WithRemoveWhenDone(true).Start()
+		prog, _ = utils.NewProgressBar().WithTitle("Analyzing paths").WithTotal(len(inputPaths)).WithRemoveWhenDone(true).Start()
 	}
 
-	sem := make(chan internal.EmptyType, max(args.Concurrency, 1))
+	sem := make(chan utils.EmptyType, max(args.Concurrency, 1))
 	for i, path := range inputPaths {
-		sem <- internal.Empty
+		sem <- utils.Empty
 		wg.Go(func() {
 			inputPaths[i].result <- args.ObsClient.Analyze(logger, path.input)
 			if prog != nil {
@@ -120,7 +122,7 @@ func ObsAnalyze(logger *pterm.Logger, args *ObsAnalyzeArgs) {
 		pterm.Println()
 		pterm.Printf(
 			"Total size: %d (%s), objects: %d (%d dirs, %d files)\n",
-			totalSize.Load(), internal.FormatSize(totalSize.Load()),
+			totalSize.Load(), utils.FormatSize(totalSize.Load()),
 			totalDirs.Load()+totalFiles.Load(),
 			totalDirs.Load(), totalFiles.Load(),
 		)

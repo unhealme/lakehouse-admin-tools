@@ -7,13 +7,13 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/unhealme/lakehouse-admin-tools/cmd"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
 )
 
 type DataArtsArguments struct {
-	CreateHetuConnection *cmd.DataArtsCreateHetuConnectionArgs `arg:"subcommand:create-hetu-connection" yaml:"-"`
-	UpdateHetuConnection *cmd.DataArtsUpdateHetuConnectionArgs `arg:"subcommand:update-hetu-connection" yaml:"-"`
+	CreateHetuConnection *args.DataArtsCreateHetuConnectionArgs `arg:"subcommand:create-hetu-connection" yaml:"-"`
+	UpdateHetuConnection *args.DataArtsUpdateHetuConnectionArgs `arg:"subcommand:update-hetu-connection" yaml:"-"`
 
 	Agent *struct {
 		Id   string
@@ -23,33 +23,40 @@ type DataArtsArguments struct {
 	InstanceId string            `arg:"-i,--" placeholder:"INSTANCE_ID" yaml:"instance_id"`
 }
 
+type FimArguments struct {
+	Address  string `arg:"-u,--url" placeholder:"FIM_ADDRESS" yaml:"address"`
+	User     string `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER" yaml:"user"`
+	Password string `arg:"-,--password,env:FIM_PASSWORD" placeholder:"FIM_PASSWORD" yaml:"password"`
+}
+
 type IamArguments struct {
-	ListUsers *cmd.IamListUsersArgs `arg:"subcommand:list-users" yaml:"-"`
+	ListGroups *args.IamListGroupsArgs `arg:"subcommand:list-groups" yaml:"-"`
+	ListUsers  *args.IamListUsersArgs  `arg:"subcommand:list-users" yaml:"-"`
 }
 
 type MrsArguments struct {
-	ListHetuTenants *cmd.MrsListHetuTenantsArgs `arg:"subcommand:list-hetu-tenants" yaml:"-"`
+	ListHetuTenants  *args.MrsListHetuTenantsArgs  `arg:"subcommand:list-hetu-tenants" yaml:"-"`
+	DumpHetuClusters *args.MrsDumpHetuClustersArgs `arg:"subcommand:dump-hetu-clusters" yaml:"-"`
 
-	ClusterId  string `arg:"-,--cluster-id" placeholder:"CLUSTER_ID" yaml:"cluster_id"`
-	FimAddress string `arg:"-,--fim-url" placeholder:"FIM_ADDRESS" yaml:"fim_address"`
-	LoginUser  string `arg:"-u,--login-user" placeholder:"USER" yaml:"login_user"`
+	ClusterId    string `arg:"-,--cluster-id" placeholder:"CLUSTER_ID" yaml:"cluster_id"`
+	ProxyAddress string `arg:"-,--mrs-proxy,env:MRS_PROXY" placeholder:"MRS_PROXY" yaml:"proxy"`
 }
 
 type ObsArguments struct {
-	Analyze              *cmd.ObsAnalyzeArgs              `arg:"subcommand:analyze" yaml:"-"`
-	BatchRename          *cmd.ObsBatchRenameArgs          `arg:"subcommand:batch-rename" yaml:"-"`
-	BatchSetStorageClass *cmd.ObsBatchSetStorageClassArgs `arg:"subcommand:batch-set-storage-class" yaml:"-"`
+	Analyze              *args.ObsAnalyzeArgs              `arg:"subcommand:analyze" yaml:"-"`
+	BatchRename          *args.ObsBatchRenameArgs          `arg:"subcommand:batch-rename" yaml:"-"`
+	BatchSetStorageClass *args.ObsBatchSetStorageClassArgs `arg:"subcommand:batch-set-storage-class" yaml:"-"`
 
 	Endpoint string `arg:"-e,--endpoint" placeholder:"ENDPOINT"`
 }
 
 type PsArguments struct {
-	AutoKill *cmd.PsAutoKillArgs `arg:"subcommand:auto-kill"`
+	AutoKill *args.PsAutoKillArgs `arg:"subcommand:auto-kill"`
 }
 
 type UamArguments struct {
-	DescribeUser *cmd.UamDescribeUserArgs `arg:"subcommand:describe-user" yaml:"-"`
-	ListMembers  *cmd.UamListMembersArgs  `arg:"subcommand:list-members" yaml:"-"`
+	DescribeUser *args.UamDescribeUserArgs `arg:"subcommand:describe-user" yaml:"-"`
+	ListMembers  *args.UamListMembersArgs  `arg:"subcommand:list-members" yaml:"-"`
 
 	Url        string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
 	User       string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
@@ -61,13 +68,14 @@ type UamArguments struct {
 }
 
 type YarnArguments struct {
-	AutoKillApps *cmd.YarnAutoKillAppsArgs `arg:"subcommand:auto-kill" yaml:"-"`
+	AutoKillApps *args.YarnAutoKillAppsArgs `arg:"subcommand:auto-kill" yaml:"-"`
 
-	RMAddress string `arg:"-u,--rm-url" placeholder:"RM_ADDRESS" yaml:"rm_address"`
+	RMAddress CommaSeparatedString `arg:"-u,--rm-url" placeholder:"RM_ADDRESS" yaml:"rm_address"`
 }
 
 type Arguments struct {
 	DataArts *DataArtsArguments `arg:"subcommand:dataarts"`
+	Fim      *FimArguments      `arg:"subcommand:fim"`
 	Iam      *IamArguments      `arg:"subcommand:iam"`
 	Mrs      *MrsArguments      `arg:"subcommand:mrs"`
 	Obs      *ObsArguments      `arg:"subcommand:obs"`

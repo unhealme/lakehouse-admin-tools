@@ -1,4 +1,4 @@
-package cmd
+package args
 
 import "github.com/unhealme/lakehouse-admin-tools/internal/obs"
 

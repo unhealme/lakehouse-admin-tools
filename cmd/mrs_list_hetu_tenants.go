@@ -8,20 +8,22 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/hetu"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const MrsListHetuTenantsVersion = "2026.07.07-0"
+const MrsListHetuTenantsVersion = "2026.08.05-0"
 
-func MrsListHetuTenants(logger *pterm.Logger, args *MrsListHetuTenantsArgs) {
-	logger.Debug("using list tenants args.", logger.Args(internal.ToArgs(*args)...))
+func MrsListHetuTenants(logger *pterm.Logger, args *args.MrsListHetuTenantsArgs) {
+	logger.Debug("using list hetu tenants args.", logger.Args(internal.ToArgs(*args)...))
 
 	resp, err := args.MrsClient.GetClusterManagerToken(args.MrsClusterId)
 	if err != nil {
 		logger.Fatal("unable to get MRS token.", logger.Args("error", err))
 	}
-	if err := args.FimClient.Login(args.LoginUser, resp.Token); err != nil {
+	if err := args.FimClient.MrsLogin(args.LoginUser, resp.Token); err != nil {
 		logger.Fatal("unable to login to FIM.", logger.Args("error", err))
 	}
 
@@ -72,7 +74,7 @@ func MrsListHetuTenants(logger *pterm.Logger, args *MrsListHetuTenantsArgs) {
 			tenant.Tenant,
 			strings.Join(tenant.ClusterIds, ", "),
 			strconv.FormatInt(int64(tenant.TotalVcores), 10),
-			internal.FormatSize(int64(tenant.TotalMemory * 1024 * 1024)),
+			utils.FormatSize(int64(tenant.TotalMemory * 1024 * 1024)),
 			strconv.FormatInt(int64(tenant.RunningCount), 10),
 			strconv.FormatInt(int64(tenant.StoppedCount), 10),
 			strconv.FormatInt(int64(tenant.ErrorCount), 10),

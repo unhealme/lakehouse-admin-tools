@@ -49,7 +49,7 @@ func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
 	if len(result.Entries) > 0 {
 		return result.Entries, nil
 	}
-	return nil, errors.New("user not found")
+	return nil, errors.New("User not found")
 }
 
 func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
@@ -90,7 +90,7 @@ func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
 	if len(groupInfos) > 0 {
 		return groupInfos, nil
 	}
-	return nil, errors.New("group not found")
+	return nil, errors.New("Group not found")
 }
 
 func NewClient(

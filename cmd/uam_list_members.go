@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
 const UamListMembersVersion = "2026.07.09-0"
 
-func UamListMembers(logger *pterm.Logger, args *UamListMembersArgs) {
+func UamListMembers(logger *pterm.Logger, args *args.UamListMembersArgs) {
 	logger.Debug("using list member args.", logger.Args(internal.ToArgs(*args)...))
 	for _, group := range args.Groups {
 		groupInfos, err := args.UamClient.ListMembers(args.BaseDn, group)

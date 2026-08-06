@@ -1,130 +1,44 @@
 package fim
 
 import (
-	"bytes"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
+	req "github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
+	"github.com/tidwall/gjson"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/hetu"
 )
 
 type FimClient struct {
-	Http    *http.Client
+	Http    *req.Client
 	FimUrl  *url.URL
 	HwToken string
 }
 
-func (c FimClient) Close() {
-	c.Http.CloseIdleConnections()
+func (c *FimClient) BasicLogin(user, passw string) error {
+	c.Http.SetCommonBasicAuth(user, passw)
+	return c.getToken()
 }
 
-func (c FimClient) Clusters() (Clusters, error) {
-	getUrl := c.FimUrl.JoinPath("/mrsmanager/api/v2/clusters")
-	getUrl.RawQuery = fmt.Sprintf("_=%d", time.Now().UnixMilli())
-
-	req, err := http.NewRequest(http.MethodGet, getUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("X-HW-FI-Auth-Token", c.HwToken)
-	req.AddCookie(&http.Cookie{Name: "FI_Auth_Token", Value: c.HwToken})
-
-	resp, err := c.Http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, internal.HttpNotOkFromResponse(resp)
-	}
-
-	clusters := make(Clusters, 0)
-	if err := json.NewDecoder(resp.Body).Decode(&clusters); err != nil {
-		return nil, err
-	}
-	return clusters, nil
+func (c *FimClient) Close() {
+	c.Http.ClearCookies().CloseIdleConnections()
+	c.Http = nil
+	c.HwToken = ""
 }
 
-func (c *FimClient) Login(loginUser, token string) error {
-	body := internal.BuildUrlEncodedPayload(map[string]string{
-		"eip":       c.FimUrl.Hostname(),
-		"userToken": token,
-		"loginUser": loginUser,
-		"lan":       "en-us",
-		"timestamp": strconv.FormatInt(time.Now().UnixMilli(), 10),
-	})
-	resp, err := c.Http.Post(
-		c.FimUrl.JoinPath("/gateway/iamcert/api/v1/mrsmanager/fi-login").String(),
-		"application/x-www-form-urlencoded",
-		bytes.NewBufferString(body),
-	)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return internal.HttpNotOkFromResponse(resp)
-	}
-
-	resp, err = c.Http.Post(
-		c.FimUrl.JoinPath("/mrsmanager/api/v2/session/login_check").String(),
-		"application/json; charset=UTF-8",
-		nil,
-	)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return internal.HttpNotOkFromResponse(resp)
-	}
-	var hwToken AuthToken
-	if err := json.NewDecoder(resp.Body).Decode(&hwToken); err != nil {
-		return err
-	}
-	c.HwToken = hwToken.Token
-	return nil
-}
-
-func (c FimClient) getHetuEngineLinks(clusterId int) ([]string, error) {
-	getUrl := c.FimUrl.JoinPath(fmt.Sprintf("/mrsmanager/api/v2/clusters/%d/services/HetuEngine/summary", clusterId))
-	getUrl.RawQuery = fmt.Sprintf("_=%d", time.Now().UnixMilli())
-
-	req, err := http.NewRequest(http.MethodGet, getUrl.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("X-HW-FI-Auth-Token", c.HwToken)
-	req.AddCookie(&http.Cookie{Name: "FI_Auth_Token", Value: c.HwToken})
-
-	resp, err := c.Http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, internal.HttpNotOkFromResponse(resp)
-	}
-
-	var summary ServiceSummary
-	if err := json.NewDecoder(resp.Body).Decode(&summary); err != nil {
-		return nil, err
-	}
-	for _, property := range summary.Properties {
-		if property.Key == "HSConsole WebUI" && property.Type == "LINK" {
-			return property.LinkValues()
-		}
-	}
-	return nil, errors.New("No Hetu links found.")
+func (c FimClient) Clusters() (clusters Clusters, err error) {
+	_, err = c.Http.R().
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetSuccessResult(&clusters).
+		Get("/mrsmanager/api/v2/clusters")
+	return
 }
 
 func (c FimClient) GetHetuEngineAuth(logger *pterm.Logger, clusterId int) (*hetu.HetuAuth, error) {
@@ -132,27 +46,22 @@ func (c FimClient) GetHetuEngineAuth(logger *pterm.Logger, clusterId int) (*hetu
 	if err != nil {
 		return nil, err
 	}
+
 	var (
 		hetuAuth  hetu.HetuAuth
 		hetuError error
 	)
 	for _, link := range links {
 		logger.Debug("trying hetu link.", logger.Args("link", link))
-		hetuUrl := c.FimUrl.JoinPath(link)
-		resp, err := c.Http.Get(hetuUrl.String())
-		if err != nil {
+		if _, err := c.Http.R().Get(link); err != nil {
 			hetuError = err
 			continue
 		}
-		if resp.StatusCode >= 400 {
-			hetuError = internal.HttpNotOkFromResponse(resp)
-			resp.Body.Close()
-			continue
-		}
-		resp.Body.Close()
 
+		hetuUrl := c.FimUrl.JoinPath(link)
 		hetuAuth.Url = hetuUrl
-		for _, cookie := range c.Http.Jar.Cookies(hetuUrl) {
+		cookies, _ := c.Http.GetCookies(hetuUrl.String())
+		for _, cookie := range cookies {
 			if cookie.Name == "JSESSIONID" {
 				hetuAuth.SessionId = cookie
 				break
@@ -164,13 +73,72 @@ func (c FimClient) GetHetuEngineAuth(logger *pterm.Logger, clusterId int) (*hetu
 	return nil, hetuError
 }
 
+func (c *FimClient) MrsLogin(loginUser, token string) (err error) {
+	if _, err = c.Http.R().
+		SetFormData(map[string]string{
+			"eip":       c.FimUrl.Hostname(),
+			"userToken": token,
+			"loginUser": loginUser,
+			"lan":       "en-us",
+			"timestamp": strconv.FormatInt(time.Now().UnixMilli(), 10),
+		}).
+		Post("/gateway/iamcert/api/v1/mrsmanager/fi-login"); err != nil {
+		return
+	}
+	if err = c.getToken(); err != nil {
+		return
+	}
+	c.Http.SetCommonCookies(&http.Cookie{Name: "FI_Auth_Token", Value: c.HwToken})
+	return
+}
+
+func (c FimClient) ResetUserPassword(user, passw string) (err error) {
+	_, err = c.Http.R().
+		SetBodyJsonMarshal(map[string]string{"newPassword": passw}).
+		Post(fmt.Sprintf("/mrsmanager/api/v2/permission/users/%s/password/reset", user))
+	return
+}
+
+func (c FimClient) getHetuEngineLinks(clusterId int) ([]string, error) {
+	var summary ServiceSummary
+	if _, err := c.Http.R().
+		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetSuccessResult(&summary).
+		Get(fmt.Sprintf("/mrsmanager/api/v2/clusters/%d/services/HetuEngine/summary", clusterId)); err != nil {
+		return nil, err
+	}
+	for _, property := range summary.Properties {
+		if property.Key == "HSConsole WebUI" && property.Type == "LINK" {
+			return property.LinkValues()
+		}
+	}
+	return nil, errors.New("No Hetu links found")
+}
+
+func (c *FimClient) getToken() error {
+	resp, err := c.Http.R().
+		SetContentType("application/json; charset=UTF-8").
+		Post("/mrsmanager/api/v2/session/login_check")
+	if err != nil {
+		return err
+	}
+	token := gjson.GetBytes(resp.Bytes(), "token").String()
+	c.Http.SetCommonHeader("X-HW-FI-Auth-Token", token)
+	c.HwToken = token
+	return nil
+}
+
 func NewClient(fimAddress string) (*FimClient, error) {
 	url, err := url.Parse(fimAddress)
 	if err != nil {
 		return nil, err
 	}
-	tr := http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	cookie, _ := cookiejar.New(nil)
-	httpClient := &http.Client{Transport: &tr, Jar: cookie}
-	return &FimClient{Http: httpClient, FimUrl: url}, err
+	httpClient := req.C().
+		DisableAutoDecode().
+		EnableInsecureSkipVerify().
+		OnAfterResponse(internal.HttpNotOkMiddleware).
+		SetBaseURL(url.String()).
+		SetJsonMarshal(json.Marshal).
+		SetJsonUnmarshal(json.Unmarshal)
+	return &FimClient{Http: httpClient, FimUrl: url}, nil
 }

@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
 const YarnAutoKillAppsVersion = "2026.07.08-0"
 
-func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
+func YarnAutoKillApps(logger *pterm.Logger, args *args.YarnAutoKillAppsArgs) {
 	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
 	apps, err := args.YarnClient.Applications(logger, []yarn.ApplicationState{yarn.RUNNING}, "", "", 0)
 	if err != nil {
@@ -29,7 +31,7 @@ func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
 		logger.Info("yarn applications filtered.", logger.Args("app to kill", total))
 		var prog *pterm.ProgressbarPrinter
 		if !args.NoProg {
-			prog, _ = internal.NewProgressBar().WithTitle("Killing yarn applications").WithTotal(total).Start()
+			prog, _ = utils.NewProgressBar().WithTitle("Killing yarn applications").WithTotal(total).Start()
 			defer prog.Stop()
 		}
 		for _, app := range appToKill {
@@ -46,7 +48,7 @@ func YarnAutoKillApps(logger *pterm.Logger, args *YarnAutoKillAppsArgs) {
 						"name", app.Name,
 						"queue", app.Queue,
 						"engine", app.ApplicationType,
-						"elapsed", internal.FormatDuration(app.ElapsedTime),
+						"elapsed", utils.FormatDuration(app.ElapsedTime),
 					),
 				)
 			}

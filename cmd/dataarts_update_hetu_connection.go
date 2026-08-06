@@ -5,12 +5,13 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
 const DataArtsUpdateHetuConnectionVersion = "2026.07.18-0"
 
-func DataArtsUpdateHetuConnection(logger *pterm.Logger, args *DataArtsUpdateHetuConnectionArgs) {
+func DataArtsUpdateHetuConnection(logger *pterm.Logger, args *args.DataArtsUpdateHetuConnectionArgs) {
 	logger.Debug("using update hetu connection args.", logger.Args(internal.ToArgs(*args)...))
 	tenantDev, tenantProd, hasDev := strings.Cut(args.Tenant, ":")
 	if !hasDev {

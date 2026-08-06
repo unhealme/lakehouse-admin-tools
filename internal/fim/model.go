@@ -2,10 +2,6 @@ package fim
 
 import "github.com/goccy/go-json"
 
-type AuthToken struct {
-	Token string
-}
-
 type Clusters []Cluster
 
 type Cluster struct {

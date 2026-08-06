@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
 const ObsBatchRenameVersion = "2026.07.11-0"
 
-func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
+func ObsBatchRename(logger *pterm.Logger, args *args.ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {
@@ -40,10 +42,10 @@ func ObsBatchRename(logger *pterm.Logger, args *ObsBatchRenameArgs) {
 	if total > 0 {
 		var prog *pterm.ProgressbarPrinter
 		if !args.NoProg {
-			prog, _ = internal.NewProgressBar().WithTitle("Renaming paths").WithTotal(total).Start()
+			prog, _ = utils.NewProgressBar().WithTitle("Renaming paths").WithTotal(total).Start()
 			defer prog.Stop()
 		}
-		internal.ParallelMap(
+		utils.ParallelMap(
 			func(path pathToRename) {
 				if !args.DryRun {
 					args.ObsClient.RenameObject(logger, path.before, path.keyAfter)

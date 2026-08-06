@@ -1,4 +1,4 @@
-package utils
+package obs_analyze_utils
 
 import (
 	"bufio"
@@ -10,8 +10,8 @@ import (
 
 	"github.com/goccy/go-json"
 	"github.com/pterm/pterm"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
 var (
@@ -65,7 +65,7 @@ func WriteOutput(stats obs.ObsPathAnalyzed) {
 		if err := csvWriter.Write([]string{
 			stats.URI(),
 			strconv.FormatInt(stats.Size, 10),
-			internal.FormatSize(stats.Size),
+			utils.FormatSize(stats.Size),
 			strconv.FormatInt(int64(stats.DirCount), 10),
 			strconv.FormatInt(int64(stats.FileCount), 10),
 		}); err != nil {
@@ -81,7 +81,7 @@ func WriteOutput(stats obs.ObsPathAnalyzed) {
 	pterm.Printf(
 		"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files)\n",
 		stats.Bucket, stats.Key,
-		stats.Size, internal.FormatSize(stats.Size),
+		stats.Size, utils.FormatSize(stats.Size),
 		stats.DirCount+stats.FileCount,
 		stats.DirCount, stats.FileCount,
 	)

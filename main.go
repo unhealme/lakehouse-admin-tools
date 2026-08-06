@@ -87,26 +87,56 @@ func main() {
 			subArgs.IamClient = iamClient
 
 			cmd.IamListUsers(logger, subArgs)
+		case args.Iam.ListGroups != nil:
+			subArgs := args.Iam.ListGroups
+			subArgs.DomainId = cfg.DomainId
+			subArgs.IamClient = iamClient
+
+			cmd.IamListGroups(logger, subArgs)
 		}
 	case args.Mrs != nil:
-		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
+		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region, cfg.Mrs.ProxyAddress)
 		if err != nil {
 			logger.Fatal("unable to create MRS client.", logger.Args("error", err))
 		}
 
-		fimClient, err := fim.NewClient(cfg.Mrs.FimAddress)
-		if err != nil {
-			logger.Fatal("unable to create FIM client.", logger.Args("error", err))
-		}
-		defer fimClient.Close()
-
 		switch {
+		case args.Mrs.DumpHetuClusters != nil:
+			subArgs := args.Mrs.DumpHetuClusters
+			subArgs.MrsClient = mrsClient
+			subArgs.MrsClusterId = cfg.Mrs.ClusterId
+			if subArgs.LoginUser == "" && cfg.Fim != nil {
+				subArgs.LoginUser = cfg.Fim.User
+			}
+			if subArgs.FimAddress == "" && cfg.Fim != nil {
+				subArgs.FimAddress = cfg.Fim.Address
+			}
+
+			fimClient, err := fim.NewClient(subArgs.FimAddress)
+			if err != nil {
+				logger.Fatal("unable to create FIM client.", logger.Args("error", err))
+			}
+			defer fimClient.Close()
+			subArgs.FimClient = fimClient
+
+			cmd.MrsDumpHetuClusters(logger, subArgs)
 		case args.Mrs.ListHetuTenants != nil:
 			subArgs := args.Mrs.ListHetuTenants
 			subArgs.MrsClient = mrsClient
-			subArgs.FimClient = fimClient
-			subArgs.LoginUser = cfg.Mrs.LoginUser
 			subArgs.MrsClusterId = cfg.Mrs.ClusterId
+			if subArgs.LoginUser == "" && cfg.Fim != nil {
+				subArgs.LoginUser = cfg.Fim.User
+			}
+			if subArgs.FimAddress == "" && cfg.Fim != nil {
+				subArgs.FimAddress = cfg.Fim.Address
+			}
+
+			fimClient, err := fim.NewClient(subArgs.FimAddress)
+			if err != nil {
+				logger.Fatal("unable to create FIM client.", logger.Args("error", err))
+			}
+			defer fimClient.Close()
+			subArgs.FimClient = fimClient
 
 			cmd.MrsListHetuTenants(logger, subArgs)
 		}
@@ -168,7 +198,7 @@ func main() {
 			cmd.UamListMembers(logger, subArgs)
 		}
 	case args.Yarn != nil:
-		yarnClient, err := yarn.NewClient(cfg.Yarn.RMAddress)
+		yarnClient, err := yarn.NewClient([]string(cfg.Yarn.RMAddress))
 		if err != nil {
 			logger.Fatal("unable to create YARN client.", logger.Args("error", err))
 		}

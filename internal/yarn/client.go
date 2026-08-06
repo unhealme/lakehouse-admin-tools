@@ -3,6 +3,7 @@ package yarn
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,16 +21,19 @@ import (
 )
 
 type YarnRMClient struct {
-	Http  *spnego.Client
-	RmUrl *url.URL
+	Http   *spnego.Client
+	RmUrls []*url.URL
+
+	krbClient *client.Client
 }
 
-func (c YarnRMClient) Close() {
+func (c *YarnRMClient) Close() {
 	c.Http.CloseIdleConnections()
+	c.Http = nil
 }
 
-func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
-	req, err := http.NewRequest(http.MethodGet, c.RmUrl.JoinPath("/ws/v1/cluster/apps").String(), nil)
+func (c *YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
+	req, err := http.NewRequest(http.MethodGet, "/ws/v1/cluster/apps", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -54,15 +58,12 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 	}
 	req.URL.RawQuery = query.Encode()
 
-	logger.Debug("fetching yarn applications.", logger.Args("url", req.URL.String()))
-	resp, err := c.Http.Do(req)
+	logger.Debug("fetching yarn applications.")
+	resp, err := c.failoverDo(logger, req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return nil, internal.HttpNotOkFromResponse(resp)
-	}
 
 	var apps Applications
 	if err := json.NewDecoder(resp.Body).Decode(&apps); err != nil {
@@ -71,10 +72,10 @@ func (c YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSta
 	return &apps, nil
 }
 
-func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
+func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
 	req, err := http.NewRequest(
 		http.MethodPut,
-		c.RmUrl.JoinPath(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id)).String(),
+		fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id),
 		bytes.NewBuffer([]byte(`{"state":"KILLED"}`)),
 	)
 	if err != nil {
@@ -82,18 +83,59 @@ func (c YarnRMClient) KillApplication(logger *pterm.Logger, app Application) err
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	resp, err := c.Http.Do(req)
+	resp, err := c.failoverDo(logger, req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 400 {
-		return internal.HttpNotOkFromResponse(resp)
-	}
+	resp.Body.Close()
 	return nil
 }
 
-func NewClient(rmAddress string) (*YarnRMClient, error) {
+func (c *YarnRMClient) failoverDo(logger *pterm.Logger, req *http.Request) (resp *http.Response, err error) {
+	rmUrl := c.RmUrls[0]
+	for range len(c.RmUrls) {
+		newReq := *req
+		newReq.URL.Scheme, newReq.URL.Host = rmUrl.Scheme, rmUrl.Host
+		logger.Debug("trying url.", logger.Args("url", req.URL.String()))
+		spnego.SetSPNEGOHeader(c.krbClient, &newReq, "")
+		if resp, err = c.Http.Do(&newReq); err != nil {
+			return nil, err
+		}
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			logger.Debug("current url order:", logger.Args("url", c.getUrlOrder()))
+			return
+		}
+		err = internal.HttpNotOkFromResponse(resp)
+		resp.Body.Close()
+
+		c.RmUrls = append(c.RmUrls[1:], rmUrl)
+		rmUrl = c.RmUrls[0]
+	}
+	return nil, fmt.Errorf("No YARN Resource Manager is available. last error is: %s", err)
+}
+
+func (c YarnRMClient) getUrlOrder() []string {
+	urls := make([]string, len(c.RmUrls))
+	for _, url := range c.RmUrls {
+		urls = append(urls, url.String())
+	}
+	return urls
+}
+
+func NewClient(rmAddresses []string) (*YarnRMClient, error) {
+	if len(rmAddresses) < 1 {
+		return nil, errors.New("Atleast one RM Address must be specified")
+	}
+
+	var rmUrls []*url.URL
+	for _, rmAddress := range rmAddresses {
+		rmUrl, err := url.Parse(rmAddress)
+		if err != nil {
+			return nil, err
+		}
+		rmUrls = append(rmUrls, rmUrl)
+	}
+
 	krbConfig, err := config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"))
 	if err != nil {
 		return nil, err
@@ -108,10 +150,6 @@ func NewClient(rmAddress string) (*YarnRMClient, error) {
 	}
 	tr := http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
 	httpClient := &http.Client{Transport: &tr}
-	spnegoClient := spnego.NewClient(krbClient, httpClient, "")
-	rmUrl, err := url.Parse(rmAddress)
-	if err != nil {
-		return nil, err
-	}
-	return &YarnRMClient{spnegoClient, rmUrl}, nil
+
+	return &YarnRMClient{spnego.NewClient(krbClient, httpClient, ""), rmUrls, krbClient}, nil
 }

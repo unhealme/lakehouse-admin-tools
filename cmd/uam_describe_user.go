@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/uam"
 )
 
 const UamDescribeUserVersion = "2026.07.08-0"
 
-func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
+func UamDescribeUser(logger *pterm.Logger, args *args.UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 	printFmt := uam.PrintFormatDefault
 	switch strings.TrimSpace(strings.ToLower(args.Format)) {
@@ -60,29 +62,9 @@ func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
 	}
 
 	var csvWriter *csv.Writer
+	var wirteHeaderOnce sync.Once
 	if printFmt == uam.PrintFormatCSV {
 		csvWriter = csv.NewWriter(outFile)
-		if !args.NoHeader {
-			if err := csvWriter.Write(
-				[]string{
-					"name",
-					"username",
-					"mail",
-					"department",
-					"directorate",
-					"divisionGroup",
-					"division",
-					"group",
-					"distinguishedName",
-					"badPwdCount",
-					"badPasswordTime",
-					"lockoutTime",
-					"pwdLastSet",
-					"lastLogon",
-				}); err != nil {
-				panic(err)
-			}
-		}
 		defer csvWriter.Flush()
 	}
 
@@ -100,6 +82,29 @@ func UamDescribeUser(logger *pterm.Logger, args *UamDescribeUserArgs) {
 				}
 				uam.PrintDefault(entry, args.GroupBase, outFile)
 			case uam.PrintFormatCSV:
+				wirteHeaderOnce.Do(func() {
+					if !args.NoHeader {
+						if err := csvWriter.Write(
+							[]string{
+								"name",
+								"username",
+								"mail",
+								"department",
+								"directorate",
+								"divisionGroup",
+								"division",
+								"group",
+								"distinguishedName",
+								"badPwdCount",
+								"badPasswordTime",
+								"lockoutTime",
+								"pwdLastSet",
+								"lastLogon",
+							}); err != nil {
+							panic(err)
+						}
+					}
+				})
 				uam.PrintCSV(entry, args.GroupBase, csvWriter)
 			}
 		}
