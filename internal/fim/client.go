@@ -95,7 +95,9 @@ func (c *FimClient) MrsLogin(loginUser, token string) (err error) {
 func (c FimClient) ResetUserPassword(user, passw string) (err error) {
 	_, err = c.Http.R().
 		SetBodyJsonMarshal(map[string]string{"newPassword": passw}).
-		Post(fmt.Sprintf("/mrsmanager/api/v2/permission/users/%s/password/reset", user))
+		Post(fmt.Sprintf("%s://%s:28443/web/api/v2/permission/users/%s/password/reset",
+			c.FimUrl.Scheme, c.FimUrl.Hostname(), user,
+		))
 	return
 }
 

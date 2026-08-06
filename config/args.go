@@ -24,9 +24,12 @@ type DataArtsArguments struct {
 }
 
 type FimArguments struct {
-	Address  string `arg:"-u,--url" placeholder:"FIM_ADDRESS" yaml:"address"`
-	User     string `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER" yaml:"user"`
-	Password string `arg:"-,--password,env:FIM_PASSWORD" placeholder:"FIM_PASSWORD" yaml:"password"`
+	ResetUserPassword *args.FimResetUserPasswordArgs `arg:"subcommand:reset-user-password" yaml:"-"`
+
+	Address         string `arg:"-u,--url" placeholder:"FIM_ADDRESS" yaml:"address"`
+	User            string `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER" yaml:"user"`
+	Password        string `arg:"-,--password,env:FIM_PASSWORD" placeholder:"FIM_PASSWORD" yaml:"password"`
+	DefaultPassword string `arg:"-" yaml:"default_password"`
 }
 
 type IamArguments struct {
@@ -87,8 +90,8 @@ type Arguments struct {
 	AccessKey    string `arg:"-,--ak,env:HW_ACCESS_KEY" placeholder:"ACCESS_KEY" yaml:"access_key"`
 	SecretKey    string `arg:"-,--sk,env:HW_SECRET_KEY" placeholder:"SECRET_KEY" yaml:"secret_key"`
 	SessionToken string `arg:"-,--token,env:HW_SECURITY_TOKEN" placeholder:"SECURITY_TOKEN" yaml:"session_token"`
-	DomainId     string `arg:"-d,--domain-id" placeholder:"DOMAIN_ID" yaml:"domain_id"`
-	Region       string `arg:"-r,--region" placeholder:"REGION"`
+	DomainId     string `arg:"-,--domain-id" placeholder:"DOMAIN_ID" yaml:"domain_id"`
+	Region       string `arg:"-,--region" placeholder:"REGION"`
 	NoColor      bool   `arg:"-,--no-color" help:"disable colorized output" yaml:"no_color"`
 	Verbose      bool   `arg:"-v,--verbose" help:"enable debug logging"`
 }

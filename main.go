@@ -73,6 +73,25 @@ func main() {
 
 			cmd.DataArtsUpdateHetuConnection(logger, subArgs)
 		}
+	case args.Fim != nil:
+		fimClient, err := fim.NewClient(cfg.Fim.Address)
+		if err != nil {
+			logger.Fatal("unable to create FIM client.", logger.Args("error", err))
+		}
+		defer fimClient.Close()
+
+		switch {
+		case args.Fim.ResetUserPassword != nil:
+			subArgs := args.Fim.ResetUserPassword
+			subArgs.FimClient = fimClient
+			subArgs.LoginUser = cfg.Fim.User
+			subArgs.LoginPass = cfg.Fim.Password
+			if subArgs.DefaultPass == "" {
+				subArgs.DefaultPass = cfg.Fim.DefaultPassword
+			}
+
+			cmd.FimResetUserPassword(logger, subArgs)
+		}
 	case args.Iam != nil:
 		logger.Debug("creating IAM client.")
 		iamClient, err := iam.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region)
