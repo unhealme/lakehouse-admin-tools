@@ -22,13 +22,13 @@ func FimResetUserPassword(logger *pterm.Logger, args *args.FimResetUserPasswordA
 		defer prog.Stop()
 	}
 	for _, user := range args.Users {
+		if err := args.FimClient.ResetUserPassword(user, args.DefaultPass); err != nil {
+			logger.Warn("unable to reset user password.", logger.Args("user", user, "error", err))
+		} else {
+			logger.Info("user password resetted.", logger.Args("user", user))
+		}
 		if prog != nil {
 			prog.Increment()
 		}
-		if err := args.FimClient.ResetUserPassword(user, args.DefaultPass); err != nil {
-			logger.Warn("unable to reset user password.", logger.Args("user", user, "error", err))
-			continue
-		}
-		logger.Info("user password resetted.", logger.Args("user", user))
 	}
 }
