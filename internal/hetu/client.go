@@ -31,7 +31,7 @@ func (c HetuClient) Clusters(page int) (*ClustersResponse[ClusterContent], error
 	if _, err := c.Http.R().
 		SetQueryParam("size", "100").
 		SetQueryParam("page", strconv.FormatInt(int64(page), 10)).
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		SetSuccessResult(&clusters).
 		Get("/v1/hsconsole/clusters"); err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (c HetuClient) ClustersRaw() (*ClustersResponse[ClusterContentRaw], error) 
 		if _, err := c.Http.R().
 			SetQueryParam("size", "100").
 			SetQueryParam("page", strconv.FormatInt(int64(page-1), 10)).
-			SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+			SetQueryString(queryTs()).
 			SetSuccessResult(&clusters).
 			Get("/v1/hsconsole/clusters"); err != nil {
 			continue
@@ -74,7 +74,7 @@ func (c HetuClient) ClustersRaw() (*ClustersResponse[ClusterContentRaw], error) 
 
 func (c *HetuClient) GetToken() error {
 	resp, err := c.Http.R().
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		Get("/v1/hsconsole/session/token")
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (c HetuClient) TenantInfo(page int) (*TenantInfoResponse, error) {
 	if _, err := c.Http.R().
 		SetQueryParam("size", "100").
 		SetQueryParam("page", strconv.FormatInt(int64(page), 10)).
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		SetSuccessResult(&tenantInfo).
 		Get("/v1/hsconsole/clusters/tenant_info"); err != nil {
 		return nil, err
@@ -149,12 +149,16 @@ func (c HetuClient) TenantInfo(page int) (*TenantInfoResponse, error) {
 func (c HetuClient) TenantConfig(tenant string) (*TenantConfigResponse, error) {
 	var tenantConfig TenantConfigResponse
 	if _, err := c.Http.R().
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		SetSuccessResult(&tenantConfig).
 		Get(fmt.Sprintf("/v1/hsconsole/clusters/config/tenant/%s", tenant)); err != nil {
 		return nil, err
 	}
 	return &tenantConfig, nil
+}
+
+func queryTs() string {
+	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 64)
 }
 
 func NewClient(hetuAuth *HetuAuth) *HetuClient {

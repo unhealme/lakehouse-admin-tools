@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"encoding/csv"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -24,7 +23,7 @@ func UamDescribeUser(logger *pterm.Logger, args *args.UamDescribeUserArgs) {
 	case "csv":
 		printFmt = uam.PrintFormatCSV
 	default:
-		logger.Fatal(fmt.Sprintf("invalid output format: %s", args.Format))
+		logger.Fatal("invalid output format: " + args.Format)
 	}
 
 	userInputs := args.Users

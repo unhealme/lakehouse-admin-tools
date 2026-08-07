@@ -25,7 +25,7 @@ func (p ObsPath) Name() string {
 }
 
 func (p ObsPath) URI() string {
-	return fmt.Sprintf("obs://%s/%s", p.Bucket, p.Key)
+	return "obs://" + p.Bucket + "/" + p.Key
 }
 
 func (p ObsPath) WithKey(key string) ObsPath {
@@ -33,7 +33,7 @@ func (p ObsPath) WithKey(key string) ObsPath {
 }
 
 func NewObsPath(bucket, key string) ObsPath {
-	return ObsPath{bucket, strings.TrimPrefix(key, "/")}
+	return ObsPath{strings.Trim(bucket, "/"), strings.TrimPrefix(key, "/")}
 }
 
 func PathFromURI(uri string) (*ObsPath, error) {

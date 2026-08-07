@@ -1,6 +1,7 @@
 package uam
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/url"
@@ -21,9 +22,9 @@ type UamClient struct {
 
 func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
 	req := ldap.NewSearchRequest(
-		baseDn,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", user, c.mailDomain),
+		baseDn, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases,
+		0, 0, false,
+		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", ldap.EscapeFilter(user), ldap.EscapeFilter(c.mailDomain)),
 		[]string{
 			"badPasswordTime",
 			"badPwdCount",
@@ -56,7 +57,7 @@ func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
 	req := ldap.NewSearchRequest(
 		baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(&(objectClass=group)(sAMAccountName=%s))", group),
+		"(&(objectClass=group)(sAMAccountName="+ldap.EscapeFilter(group)+"))",
 		[]string{"cn", "dn", "member"},
 		nil,
 	)
@@ -72,9 +73,9 @@ func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
 		for _, memberCn := range entry.GetAttributeValues("member") {
 			cn, base, _ := strings.Cut(memberCn, ",")
 			getMember := ldap.NewSearchRequest(
-				base,
-				ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-				fmt.Sprintf("(%s)", cn),
+				base, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases,
+				0, 0, false,
+				"("+ldap.EscapeFilter(cn)+")",
 				[]string{"sAMAccountName"},
 				nil,
 			)
@@ -98,7 +99,7 @@ func NewClient(
 	ldapUrl, user, passw string,
 	mailDomain, realm string,
 ) (*UamClient, error) {
-	base, err := ldap.DialURL(ldapUrl)
+	base, err := ldap.DialURL(ldapUrl, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
 	if err != nil {
 		return nil, err
 	}
@@ -107,9 +108,7 @@ func NewClient(
 
 		// https://github.com/go-ldap/ldap/issues/536
 		gssapiClient, err := gssapi.NewClientWithPassword(
-			user,
-			realm,
-			passw,
+			user, realm, passw,
 			internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"),
 			client.DisablePAFXFAST(true),
 		)
@@ -123,8 +122,9 @@ func NewClient(
 		}
 
 		// https://github.com/go-ldap/ldap/issues/536#issuecomment-2473581901
-		bindReq := &ldap.GSSAPIBindRequest{}
-		bindReq.ServicePrincipalName = fmt.Sprintf("ldap/%s", parsedUrl.Hostname())
+		bindReq := &ldap.GSSAPIBindRequest{
+			ServicePrincipalName: "ldap/" + parsedUrl.Hostname(),
+		}
 		if err := base.GSSAPIBindRequestWithAPOptions(gssapiClient, bindReq, []int{flags.APOptionMutualRequired}); err != nil {
 			return nil, err
 		}

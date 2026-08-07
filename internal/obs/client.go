@@ -1,7 +1,6 @@
 package obs
 
 import (
-	"fmt"
 	"iter"
 	"strings"
 	"sync"
@@ -18,8 +17,9 @@ type ObsClient struct{ *obs.ObsClient }
 func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
 	return func(yield func(ObsPathContent) bool) {
 		p := 1
+		obsPathStr := "obs://" + input.Bucket + "/" + input.Prefix
 		for {
-			logArgs := logger.Args("depth", depth, "path", fmt.Sprintf("obs://%s/%s", input.Bucket, input.Prefix), "page", p)
+			logArgs := logger.Args("depth", depth, "path", obsPathStr, "page", p)
 			logger.Debug("listing obs paths.", logArgs)
 			r, err := c.ListObjects(&input)
 			if err != nil {

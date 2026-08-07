@@ -72,7 +72,7 @@ func (c DataArtsClient) GetConnectionConfig(workspaceId, connectionId string) (*
 }
 
 func (c DataArtsClient) GetConnectionFromName(workspaceId, connectionName string, refreshCache bool) (*model.ApigDataSourceView, error) {
-	index := fmt.Sprintf("%s/%s", workspaceId, connectionName)
+	index := workspaceId + "/" + connectionName
 	if connectionCache == nil || refreshCache {
 		req := &model.ListDataconnectionsRequest{}
 		req.Workspace = workspaceId

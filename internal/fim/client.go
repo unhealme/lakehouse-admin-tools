@@ -35,7 +35,7 @@ func (c *FimClient) Close() {
 
 func (c FimClient) Clusters() (clusters Clusters, err error) {
 	_, err = c.Http.R().
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		SetSuccessResult(&clusters).
 		Get("/mrsmanager/api/v2/clusters")
 	return
@@ -104,7 +104,7 @@ func (c FimClient) ResetUserPassword(user, passw string) (err error) {
 func (c FimClient) getHetuEngineLinks(clusterId int) ([]string, error) {
 	var summary ServiceSummary
 	if _, err := c.Http.R().
-		SetQueryString(fmt.Sprintf("_=%d", time.Now().UnixMilli())).
+		SetQueryString(queryTs()).
 		SetSuccessResult(&summary).
 		Get(fmt.Sprintf("/mrsmanager/api/v2/clusters/%d/services/HetuEngine/summary", clusterId)); err != nil {
 		return nil, err
@@ -128,6 +128,10 @@ func (c *FimClient) getToken() error {
 	c.Http.SetCommonHeader("X-HW-FI-Auth-Token", token)
 	c.HwToken = token
 	return nil
+}
+
+func queryTs() string {
+	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 64)
 }
 
 func NewClient(fimAddress string) (*FimClient, error) {
