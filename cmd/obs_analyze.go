@@ -13,7 +13,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-const ObsAnalyzeVersion = "2026.07.25-0"
+const ObsAnalyzeVersion = "2026.08.07-0"
 
 func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -52,10 +52,17 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 				resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed)},
 			)
 		} else {
-			for _, key := range args.ObsClient.Glob(logger, *inputPath) {
+			keys := args.ObsClient.Glob(logger, *inputPath)
+			if len(keys) < 1 {
 				inputPaths = append(inputPaths,
-					resultPath{inputPath, inputPath.WithKey(key), make(chan obs.ObsPathAnalyzed)},
+					resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed)},
 				)
+			} else {
+				for _, key := range keys {
+					inputPaths = append(inputPaths,
+						resultPath{inputPath, inputPath.WithKey(key), make(chan obs.ObsPathAnalyzed)},
+					)
+				}
 			}
 		}
 	}
