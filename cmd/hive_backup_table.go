@@ -110,15 +110,16 @@ func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 		defer prog.Stop()
 	}
 	fetchResult := func(t backupHiveTableResult) *backupHiveTableResult {
-		if ddl, err := c.ShowCreateTable(t.Db, t.Table); err != nil {
-			logger.Warn("unable to get ddl.", logger.Args("db", t.Db, "table", t.Table))
-		} else {
-			t.Ddl = ddl
+		var err error
+		logArgs := logger.Args("db", t.Db, "table", t.Table)
+		if t.Ddl, err = c.ShowCreateTable(t.Db, t.Table); err != nil {
+			logger.Warn("unable to get ddl.", logArgs, logger.Args("error", err))
 		}
-		if desc, err := c.DescribeFormattedTable(t.Db, t.Table); err != nil {
-			logger.Warn("unable to describe.", logger.Args("db", t.Db, "table", t.Table))
-		} else {
-			t.Desc = desc
+		if t.Desc, err = c.DescribeFormattedTable(t.Db, t.Table); err != nil {
+			logger.Warn("unable to describe.", logArgs, logger.Args("error", err))
+		}
+		if err == nil {
+			logger.Debug("successfully backup table.", logArgs)
 		}
 		if prog != nil {
 			prog.Increment()
