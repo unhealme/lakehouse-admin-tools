@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 
+	json "github.com/goccy/go-json"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
+	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
 var OBSURIPattern = regexp.MustCompile(`^obs://(?P<bucket>[^/]+)/(?P<key>.+)$`)
@@ -57,10 +60,33 @@ func NewObsPathContent(depth int, bucket, key string, content *obs.Content) ObsP
 	return v
 }
 
+var ObsPathAnalyzedHeader = []string{
+	"ObsPath",
+	"RawSize",
+	"Size",
+	"DirCount",
+	"FileCount",
+}
+
 type ObsPathAnalyzed struct {
 	ObsPath
 	Exists    bool  `json:"exists"`
 	DirCount  int   `json:"dir_count"`
 	FileCount int   `json:"file_count"`
 	Size      int64 `json:"size"`
+}
+
+func (p ObsPathAnalyzed) SerCsv() []string {
+	return []string{
+		p.URI(),
+		strconv.FormatInt(p.Size, 10),
+		utils.FormatSize(p.Size),
+		strconv.FormatInt(int64(p.DirCount), 10),
+		strconv.FormatInt(int64(p.FileCount), 10),
+	}
+}
+
+func (p ObsPathAnalyzed) SerJson() (v []byte) {
+	v, _ = json.Marshal(p)
+	return
 }

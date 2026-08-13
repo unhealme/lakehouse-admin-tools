@@ -1,7 +1,6 @@
 package hetu
 
 import (
-	"fmt"
 	"iter"
 	"net/url"
 	"strconv"
@@ -149,16 +148,17 @@ func (c HetuClient) TenantInfo(page int) (*TenantInfoResponse, error) {
 func (c HetuClient) TenantConfig(tenant string) (*TenantConfigResponse, error) {
 	var tenantConfig TenantConfigResponse
 	if _, err := c.Http.R().
+		SetPathParam("tenant", tenant).
 		SetQueryString(queryTs()).
 		SetSuccessResult(&tenantConfig).
-		Get(fmt.Sprintf("/v1/hsconsole/clusters/config/tenant/%s", tenant)); err != nil {
+		Get("/v1/hsconsole/clusters/config/tenant/{tenant}"); err != nil {
 		return nil, err
 	}
 	return &tenantConfig, nil
 }
 
 func queryTs() string {
-	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 64)
+	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 }
 
 func NewClient(hetuAuth *HetuAuth) *HetuClient {

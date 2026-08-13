@@ -11,6 +11,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/dataarts"
 	"github.com/unhealme/lakehouse-admin-tools/internal/fim"
+	"github.com/unhealme/lakehouse-admin-tools/internal/hive"
 	"github.com/unhealme/lakehouse-admin-tools/internal/iam"
 	"github.com/unhealme/lakehouse-admin-tools/internal/mrs"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
@@ -91,6 +92,24 @@ func main() {
 			}
 
 			cmd.FimResetUserPassword(logger, subArgs)
+		}
+	case args.Hive != nil:
+		hiveServerClient, err := hive.NewHSClient(cfg.Hive.Url)
+		if err != nil {
+			logger.Fatal("unable to create HiveServer client.", logger.Args("error", err))
+		}
+		defer hiveServerClient.Close()
+
+		if cfg.Hive.HostQualName != "" {
+			os.Setenv("SERVICE_HOST_QUALIFIED", cfg.Hive.HostQualName)
+		}
+
+		switch {
+		case args.Hive.BackupTable != nil:
+			subArgs := args.Hive.BackupTable
+			subArgs.HiveServerClient = hiveServerClient
+
+			cmd.HiveBackupTable(logger, subArgs)
 		}
 	case args.Iam != nil:
 		logger.Debug("creating IAM client.")

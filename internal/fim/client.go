@@ -131,7 +131,7 @@ func (c *FimClient) getToken() error {
 }
 
 func queryTs() string {
-	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 64)
+	return "_=" + strconv.FormatInt(time.Now().UnixMilli(), 10)
 }
 
 func NewClient(fimAddress string) (*FimClient, error) {

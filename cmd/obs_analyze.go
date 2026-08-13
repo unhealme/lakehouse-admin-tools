@@ -8,7 +8,6 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/obs"
-	analyze_utils "github.com/unhealme/lakehouse-admin-tools/internal/obs/analyze-utils"
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 	"go.uber.org/atomic"
 )
@@ -22,16 +21,16 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	}
 
 	if args.CsvOut != "" {
-		if err := analyze_utils.OpenCsvWriter(args.CsvOut); err != nil {
+		if err := utils.OpenCsvWriter(args.CsvOut, obs.ObsPathAnalyzedHeader); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
 	if args.JsonOut != "" {
-		if err := analyze_utils.OpenJsonWriter(args.JsonOut); err != nil {
+		if err := utils.OpenJsonWriter(args.JsonOut); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.CsvOut, "error", err))
 		}
 	}
-	defer analyze_utils.CloseOutput()
+	defer utils.CloseOutput()
 
 	type resultPath struct {
 		raw    *obs.ObsPath
@@ -88,7 +87,14 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 			stats := <-key.result
 			if stats.Exists {
 				pathExists = true
-				analyze_utils.WriteOutput(stats)
+				utils.WriteOutput(stats)
+				pterm.Printf(
+					"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files)\n",
+					stats.Bucket, stats.Key,
+					stats.Size, utils.FormatSize(stats.Size),
+					stats.DirCount+stats.FileCount,
+					stats.DirCount, stats.FileCount,
+				)
 				totalSize.Add(stats.Size)
 				totalDirs.Add(int64(stats.DirCount))
 				totalFiles.Add(int64(stats.FileCount))

@@ -2,12 +2,13 @@ package config
 
 import "github.com/unhealme/lakehouse-admin-tools/cmd"
 
-const Version = "0.12.1"
+const Version = "0.13.0"
 
 var compVer = map[string]string{
 	"dataarts-create-hetu-connection": cmd.DataArtsCreateHetuConnectionVersion,
 	"dataarts-update-hetu-connection": cmd.DataArtsUpdateHetuConnectionVersion,
 	"fim-reset-user-password":         cmd.FimResetUserPasswordVersion,
+	"hive-backup-table":               cmd.HiveBackupTableVersion,
 	"iam-list-groups":                 cmd.IamListGroupsVersion,
 	"iam-list-users":                  cmd.IamListUsersVersion,
 	"mrs-dump-hetu-clusters":          cmd.MrsDumpHetuClustersVersion,

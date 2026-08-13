@@ -1,9 +1,9 @@
 package uam
 
 import (
-	"encoding/csv"
+	"bufio"
 	"fmt"
-	"os"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,13 +13,6 @@ import (
 )
 
 const defaultFmt = "%-18s : %s\n"
-
-type PrintFormat int
-
-const (
-	PrintFormatDefault PrintFormat = iota + 1
-	PrintFormatCSV
-)
 
 func parseGroup(values []string, base string) string {
 	var groups []string
@@ -44,46 +37,55 @@ func parseTime(ldapTime string) string {
 	return time.Unix((t/10000000)-11644473600, 0).Local().String()
 }
 
-func PrintDefault(entry *ldap.Entry, groupBase string, writer *os.File) {
-	fmt.Fprintf(writer, defaultFmt, "distinguishedName", entry.DN)
+func defaultPrinter(w io.Writer, format string, a ...any) {
+	if _, err := fmt.Fprintf(w, format, a...); err != nil {
+		panic(err)
+	}
+}
+
+func PrintDefault(entry *ldap.Entry, groupBase string, writer *bufio.Writer) {
+	defaultPrinter(writer, defaultFmt, "distinguishedName", entry.DN)
 	for _, attr := range entry.Attributes {
 		switch attr.Name {
 		case "extensionAttribute13":
-			fmt.Fprintf(writer, defaultFmt, "directorate", attr.Values[0])
+			defaultPrinter(writer, defaultFmt, "directorate", attr.Values[0])
 		case "extensionAttribute14":
-			fmt.Fprintf(writer, defaultFmt, "divisionGroup", attr.Values[0])
+			defaultPrinter(writer, defaultFmt, "divisionGroup", attr.Values[0])
 		case "extensionAttribute15":
-			fmt.Fprintf(writer, defaultFmt, "division", attr.Values[0])
+			defaultPrinter(writer, defaultFmt, "division", attr.Values[0])
 		case "sAMAccountName":
-			fmt.Fprintf(writer, defaultFmt, "username", attr.Values[0])
+			defaultPrinter(writer, defaultFmt, "username", attr.Values[0])
 		case "memberOf":
-			fmt.Fprintf(writer, defaultFmt, "group", parseGroup(attr.Values, groupBase))
+			defaultPrinter(writer, defaultFmt, "group", parseGroup(attr.Values, groupBase))
 		case "badPasswordTime", "lockoutTime", "pwdLastSet", "lastLogon":
-			fmt.Fprintf(writer, defaultFmt, attr.Name, parseTime(attr.Values[0]))
+			defaultPrinter(writer, defaultFmt, attr.Name, parseTime(attr.Values[0]))
 		default:
-			fmt.Fprintf(writer, defaultFmt, attr.Name, attr.Values[0])
+			defaultPrinter(writer, defaultFmt, attr.Name, attr.Values[0])
 		}
 	}
 }
 
-func PrintCSV(entry *ldap.Entry, groupBase string, writer *csv.Writer) {
+type EntryCsvSer struct {
+	Entry     *ldap.Entry
+	GroupBase string
+}
+
+func (e EntryCsvSer) SerCsv() []string {
 	// name,username,mail,department,directorate,divisionGroup,division,group,distinguishedName,badPwdCount,badPasswordTime,lockoutTime,pwdLastSet,lastLogon
-	if err := writer.Write([]string{
-		entry.GetAttributeValue("name"),
-		entry.GetAttributeValue("sAMAccountName"),
-		entry.GetAttributeValue("mail"),
-		entry.GetAttributeValue("department"),
-		entry.GetAttributeValue("extensionAttribute13"),
-		entry.GetAttributeValue("extensionAttribute14"),
-		entry.GetAttributeValue("extensionAttribute15"),
-		parseGroup(entry.GetAttributeValues("memberOf"), groupBase),
-		entry.DN,
-		entry.GetAttributeValue("badPwdCount"),
-		parseTime(entry.GetAttributeValue("badPasswordTime")),
-		parseTime(entry.GetAttributeValue("lockoutTime")),
-		parseTime(entry.GetAttributeValue("pwdLastSet")),
-		parseTime(entry.GetAttributeValue("lastLogon")),
-	}); err != nil {
-		panic(err)
+	return []string{
+		e.Entry.GetAttributeValue("name"),
+		e.Entry.GetAttributeValue("sAMAccountName"),
+		e.Entry.GetAttributeValue("mail"),
+		e.Entry.GetAttributeValue("department"),
+		e.Entry.GetAttributeValue("extensionAttribute13"),
+		e.Entry.GetAttributeValue("extensionAttribute14"),
+		e.Entry.GetAttributeValue("extensionAttribute15"),
+		parseGroup(e.Entry.GetAttributeValues("memberOf"), e.GroupBase),
+		e.Entry.DN,
+		e.Entry.GetAttributeValue("badPwdCount"),
+		parseTime(e.Entry.GetAttributeValue("badPasswordTime")),
+		parseTime(e.Entry.GetAttributeValue("lockoutTime")),
+		parseTime(e.Entry.GetAttributeValue("pwdLastSet")),
+		parseTime(e.Entry.GetAttributeValue("lastLogon")),
 	}
 }

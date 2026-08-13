@@ -58,6 +58,7 @@ func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 	var prog *pterm.ProgressbarPrinter
 	if !args.NoProg && args.OutputFile != "" {
 		prog, _ = utils.NewProgressBar().WithTitle("Listing users").WithTotal(len(users)).Start()
+		defer prog.Stop()
 	}
 
 	serializeIamUser := func(user *model.KeystoneListUsersResult) []string {
@@ -107,8 +108,5 @@ func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 		if err := csvWriter.Write(result); err != nil {
 			panic(err)
 		}
-	}
-	if prog != nil {
-		prog.Stop()
 	}
 }

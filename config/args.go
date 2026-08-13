@@ -32,6 +32,13 @@ type FimArguments struct {
 	DefaultPassword string `arg:"-" yaml:"default_password"`
 }
 
+type HiveArguments struct {
+	BackupTable *args.HiveBackupTableArgs `arg:"subcommand:backup-table" yaml:"-"`
+
+	Url          string `arg:"-u,--url" placeholder:"HIVE_URL" yaml:"url"`
+	HostQualName string `arg:"-,--host-qn" placeholder:"NAME" yaml:"host_qual_name"`
+}
+
 type IamArguments struct {
 	ListGroups *args.IamListGroupsArgs `arg:"subcommand:list-groups" yaml:"-"`
 	ListUsers  *args.IamListUsersArgs  `arg:"subcommand:list-users" yaml:"-"`
@@ -79,6 +86,7 @@ type YarnArguments struct {
 type Arguments struct {
 	DataArts *DataArtsArguments `arg:"subcommand:dataarts"`
 	Fim      *FimArguments      `arg:"subcommand:fim"`
+	Hive     *HiveArguments     `arg:"subcommand:hive"`
 	Iam      *IamArguments      `arg:"subcommand:iam"`
 	Mrs      *MrsArguments      `arg:"subcommand:mrs"`
 	Obs      *ObsArguments      `arg:"subcommand:obs"`
@@ -106,5 +114,5 @@ func (Arguments) Epilogue() string {
 }
 
 func (Arguments) Version() string {
-	return fmt.Sprintf("lakehouse-admin-tools %s (%s-%s)\n", Version, runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("lakehouse-admin-tools %s (%s-%s)", Version, runtime.GOOS, runtime.GOARCH)
 }
