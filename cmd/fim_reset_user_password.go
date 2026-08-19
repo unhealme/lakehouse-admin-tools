@@ -7,7 +7,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const FimResetUserPasswordVersion = "2026.08.06-0"
+const FimResetUserPasswordVersion = "2026.08.19-0"
 
 func FimResetUserPassword(logger *pterm.Logger, args *args.FimResetUserPasswordArgs) {
 	logger.Debug("using reset user password args.", logger.Args(internal.ToArgs(*args)...))

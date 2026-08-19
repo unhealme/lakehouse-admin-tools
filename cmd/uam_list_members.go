@@ -10,12 +10,12 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 )
 
-const UamListMembersVersion = "2026.07.09-0"
+const UamListMembersVersion = "2026.08.19-0"
 
 func UamListMembers(logger *pterm.Logger, args *args.UamListMembersArgs) {
 	logger.Debug("using list member args.", logger.Args(internal.ToArgs(*args)...))
 	for _, group := range args.Groups {
-		groupInfos, err := args.UamClient.ListMembers(args.BaseDn, group)
+		groupInfos, err := args.UamClient.ListMembers(args.BaseDn, group, args.Unsafe)
 		if err != nil {
 			logger.Error("unable to list member.", logger.Args("group", group, "error", err))
 		}

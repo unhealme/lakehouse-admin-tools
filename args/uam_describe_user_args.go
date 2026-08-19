@@ -13,6 +13,7 @@ type UamDescribeUserArgs struct {
 	OutputFile string                     `arg:"-o,--" help:"write result to FILE instead of stdout" placeholder:"FILE"`
 	Format     UamDescribeUserPrintFormat `arg:"-f,--format" default:"default" help:"output format" placeholder:"{default,csv}"`
 	NoHeader   bool                       `arg:"-,--no-header" help:"do not print header for csv output format"`
+	Unsafe     bool                       `arg:"-,--unsafe" help:"do not escape USER"`
 
 	BaseDn    string         `arg:"-"`
 	GroupBase string         `arg:"-"`

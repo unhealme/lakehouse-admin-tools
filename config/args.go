@@ -26,10 +26,11 @@ type DataArtsArguments struct {
 type FimArguments struct {
 	ResetUserPassword *args.FimResetUserPasswordArgs `arg:"subcommand:reset-user-password" yaml:"-"`
 
-	Address         string `arg:"-u,--url" placeholder:"FIM_ADDRESS" yaml:"address"`
-	User            string `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER" yaml:"user"`
-	Password        string `arg:"-,--password,env:FIM_PASSWORD" placeholder:"FIM_PASSWORD" yaml:"password"`
-	DefaultPassword string `arg:"-" yaml:"default_password"`
+	Addresses       map[string]string `arg:"-" yaml:"addresses"`
+	Address         string            `arg:"-u,--url,required" help:"can use mapping name instead instead of url address" placeholder:"FIM_ADDRESS" yaml:"-"`
+	User            string            `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER" yaml:"user"`
+	Password        string            `arg:"-,--password,env:FIM_PASSWORD" placeholder:"FIM_PASSWORD" yaml:"password"`
+	DefaultPassword string            `arg:"-" yaml:"default_password"`
 }
 
 type HiveArguments struct {
@@ -68,13 +69,13 @@ type UamArguments struct {
 	DescribeUser *args.UamDescribeUserArgs `arg:"subcommand:describe-user" yaml:"-"`
 	ListMembers  *args.UamListMembersArgs  `arg:"subcommand:list-members" yaml:"-"`
 
+	BaseDN     string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN" yaml:"base_dn"`
 	Url        string `arg:"-u,--,env:LDAP_URL" placeholder:"LDAP_URL"`
 	User       string `arg:"-,--user,env:LDAP_BIND_USER" placeholder:"LDAP_BIND_USER"`
 	Password   string `arg:"-,--password,env:LDAP_BIND_PASSWORD" placeholder:"LDAP_BIND_PASSWORD"`
-	BaseDN     string `arg:"-b,--base-dn" placeholder:"LDAP_BASE_DN" yaml:"base_dn"`
-	GroupBase  string `arg:"-g,--group-base" placeholder:"LDAP_GROUP_BASE" yaml:"group_base"`
-	MailDomain string `arg:"-d,--mail-domain" placeholder:"LDAP_MAIL_DOMAIN" yaml:"mail_domain"`
-	Realm      string `arg:"-r,--realm" placeholder:"REALM"`
+	GroupBase  string `arg:"-,--group-base" placeholder:"LDAP_GROUP_BASE" yaml:"group_base"`
+	MailDomain string `arg:"-,--mail-domain" placeholder:"LDAP_MAIL_DOMAIN" yaml:"mail_domain"`
+	Realm      string `arg:"-,--realm" placeholder:"REALM"`
 }
 
 type YarnArguments struct {

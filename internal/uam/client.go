@@ -20,11 +20,14 @@ type UamClient struct {
 	mailDomain string
 }
 
-func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
+func (c UamClient) DescribeUser(baseDn, user string, unsafe bool) ([]*ldap.Entry, error) {
+	if !unsafe {
+		user = ldap.EscapeFilter(user)
+	}
 	req := ldap.NewSearchRequest(
 		baseDn, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases,
 		0, 0, false,
-		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", ldap.EscapeFilter(user), ldap.EscapeFilter(c.mailDomain)),
+		fmt.Sprintf("(&(objectClass=user)(|(sAMAccountName=%[1]s)(mail=%[1]s@%[2]s)(mail=%[1]s)))", user, ldap.EscapeFilter(c.mailDomain)),
 		[]string{
 			"badPasswordTime",
 			"badPwdCount",
@@ -53,11 +56,14 @@ func (c UamClient) DescribeUser(baseDn, user string) ([]*ldap.Entry, error) {
 	return nil, errors.New("User not found")
 }
 
-func (c UamClient) ListMembers(baseDn, group string) ([]*GroupInfo, error) {
+func (c UamClient) ListMembers(baseDn, group string, unsafe bool) ([]*GroupInfo, error) {
+	if !unsafe {
+		group = ldap.EscapeFilter(group)
+	}
 	req := ldap.NewSearchRequest(
 		baseDn,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(&(objectClass=group)(sAMAccountName="+ldap.EscapeFilter(group)+"))",
+		"(&(objectClass=group)(sAMAccountName="+group+"))",
 		[]string{"cn", "dn", "member"},
 		nil,
 	)

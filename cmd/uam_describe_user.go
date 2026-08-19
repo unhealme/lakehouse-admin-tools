@@ -12,7 +12,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const UamDescribeUserVersion = "2026.07.08-0"
+const UamDescribeUserVersion = "2026.08.19-0"
 
 func UamDescribeUser(logger *pterm.Logger, args *cmd_args.UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
@@ -82,7 +82,7 @@ func UamDescribeUser(logger *pterm.Logger, args *cmd_args.UamDescribeUserArgs) {
 	}
 
 	for i, user := range userInputs {
-		entries, err := args.UamClient.DescribeUser(args.BaseDn, user)
+		entries, err := args.UamClient.DescribeUser(args.BaseDn, user, args.Unsafe)
 		if err != nil {
 			logger.Error("unable to describe user.", logger.Args("user", user, "error", err))
 			continue

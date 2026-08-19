@@ -75,7 +75,11 @@ func main() {
 			cmd.DataArtsUpdateHetuConnection(logger, subArgs)
 		}
 	case args.Fim != nil:
-		fimClient, err := fim.NewClient(cfg.Fim.Address)
+		address, mapped := cfg.Fim.Addresses[cfg.Fim.Address]
+		if !mapped {
+			address = cfg.Fim.Address
+		}
+		fimClient, err := fim.NewClient(address)
 		if err != nil {
 			logger.Fatal("unable to create FIM client.", logger.Args("error", err))
 		}
