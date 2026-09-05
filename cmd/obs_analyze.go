@@ -1,8 +1,9 @@
 package cmd
 
 import (
+	"context"
 	"strings"
-	"sync"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/args"
@@ -12,7 +13,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-const ObsAnalyzeVersion = "2026.08.07-0"
+const ObsAnalyzeVersion = "2026.09.05-1"
 
 func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -47,19 +48,23 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 		}
 
 		if args.Fixed || !strings.ContainsAny(inputPath.Key, obs.GlobToken) {
-			inputPaths = append(inputPaths,
-				resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed)},
+			inputPaths = append(
+				inputPaths,
+				resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed, 1)},
 			)
 		} else {
 			keys := args.ObsClient.Glob(logger, *inputPath)
+			logger.Debug("glob path expanded.", logger.Args("totalKeys", len(keys)))
 			if len(keys) < 1 {
-				inputPaths = append(inputPaths,
-					resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed)},
+				inputPaths = append(
+					inputPaths,
+					resultPath{inputPath, *inputPath, make(chan obs.ObsPathAnalyzed, 1)},
 				)
 			} else {
 				for _, key := range keys {
-					inputPaths = append(inputPaths,
-						resultPath{inputPath, inputPath.WithKey(key), make(chan obs.ObsPathAnalyzed)},
+					inputPaths = append(
+						inputPaths,
+						resultPath{inputPath, inputPath.WithKey(key), make(chan obs.ObsPathAnalyzed, 1)},
 					)
 				}
 			}
@@ -67,13 +72,14 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	}
 
 	var (
-		totalSize  atomic.Int64
-		totalDirs  atomic.Int64
-		totalFiles atomic.Int64
+		totalSize    atomic.Int64
+		totalDirs    atomic.Int64
+		totalFiles   atomic.Int64
+		lastModified atomic.Int64
 
-		wg sync.WaitGroup
+		slot = utils.NewSlot(args.Concurrency)
 	)
-	wg.Go(func() {
+	slot.DoNow(func() {
 		var pathKey string
 		pathExists := false
 		for _, key := range inputPaths {
@@ -84,24 +90,33 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 				pathExists = false
 			}
 			pathKey = key.raw.URI()
+
 			stats := <-key.result
 			if stats.Exists {
 				pathExists = true
 				utils.WriteOutput(stats)
 				pterm.Printf(
-					"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files)\n",
+					"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files), last modified: %s\n",
 					stats.Bucket, stats.Key,
 					stats.Size, utils.FormatSize(stats.Size),
 					stats.DirCount+stats.FileCount,
 					stats.DirCount, stats.FileCount,
+					time.Unix(0, stats.LastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 				)
 				totalSize.Add(stats.Size)
-				totalDirs.Add(int64(stats.DirCount))
-				totalFiles.Add(int64(stats.FileCount))
+				totalDirs.Add(stats.DirCount)
+				totalFiles.Add(stats.FileCount)
+				for {
+					cur := lastModified.Load()
+					if stats.LastModified <= cur {
+						break
+					}
+					if lastModified.CompareAndSwap(cur, stats.LastModified) {
+						break
+					}
+				}
 				if strings.HasSuffix(stats.Key, "/") {
 					totalDirs.Inc()
-				} else {
-					totalFiles.Inc()
 				}
 			}
 		}
@@ -111,33 +126,36 @@ func ObsAnalyze(logger *pterm.Logger, args *args.ObsAnalyzeArgs) {
 	})
 
 	var prog *pterm.ProgressbarPrinter
+	var progDone context.CancelFunc
 	if !args.NoProg {
-		prog, _ = utils.NewProgressBar().WithTitle("Analyzing paths").WithTotal(len(inputPaths)).WithRemoveWhenDone(true).Start()
+		var ctx context.Context
+		ctx, progDone = context.WithCancel(context.Background())
+		prog, _ = utils.NewProgressBar(ctx).WithTitle("Analyzing paths").
+			WithTotal(len(inputPaths)).WithRemoveWhenDone(true).Start()
+		_ = progDone
 	}
 
-	sem := make(chan utils.EmptyType, max(args.Concurrency, 1))
 	for i, path := range inputPaths {
-		sem <- utils.Empty
-		wg.Go(func() {
-			inputPaths[i].result <- args.ObsClient.Analyze(logger, path.input)
+		slot.Do(func() {
+			inputPaths[i].result <- args.ObsClient.Analyze(logger, slot, args.MinChunks, path.input)
 			if prog != nil {
 				prog.Increment()
 			}
-			<-sem
 		})
 	}
-	wg.Wait()
+	slot.Wait()
 	if prog != nil {
-		prog.Stop()
+		progDone()
 	}
 
 	if args.Summarize {
 		pterm.Println()
 		pterm.Printf(
-			"Total size: %d (%s), objects: %d (%d dirs, %d files)\n",
+			"Total size: %d (%s), objects: %d (%d dirs, %d files), last modified: %s\n",
 			totalSize.Load(), utils.FormatSize(totalSize.Load()),
 			totalDirs.Load()+totalFiles.Load(),
 			totalDirs.Load(), totalFiles.Load(),
+			time.Unix(0, lastModified.Load()*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 		)
 	}
 }

@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"context"
 	rand "math/rand/v2"
 	"path"
-	"slices"
 	"strings"
 	"time"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const ObsBatchRenameVersion = "2026.07.11-0"
+const ObsBatchRenameVersion = "2026.09.05-0"
 
 func ObsBatchRename(logger *pterm.Logger, args *args.ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
@@ -42,10 +42,11 @@ func ObsBatchRename(logger *pterm.Logger, args *args.ObsBatchRenameArgs) {
 	if total > 0 {
 		var prog *pterm.ProgressbarPrinter
 		if !args.NoProg {
-			prog, _ = utils.NewProgressBar().WithTitle("Renaming paths").WithTotal(total).Start()
-			defer prog.Stop()
+			ctx, done := context.WithCancel(context.Background())
+			prog, _ = utils.NewProgressBar(ctx).WithTitle("Renaming paths").WithTotal(total).Start()
+			defer done()
 		}
-		utils.ParallelMap(
+		utils.NewSlot(max(args.Concurrency, 1)).Map(
 			func(path pathToRename) {
 				if !args.DryRun {
 					args.ObsClient.RenameObject(logger, path.before, path.keyAfter)
@@ -57,8 +58,7 @@ func ObsBatchRename(logger *pterm.Logger, args *args.ObsBatchRenameArgs) {
 					prog.Increment()
 				}
 			},
-			slices.Values(paths),
-			args.Concurrency,
+			paths,
 		)
 	}
 	logger.Info("rename obs paths done.")

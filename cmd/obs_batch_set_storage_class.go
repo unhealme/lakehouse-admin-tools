@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"iter"
 	rand "math/rand/v2"
 	"os"
@@ -19,7 +20,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const ObsBatchSetStorageClassVersion = "2026.06.22-0"
+const ObsBatchSetStorageClassVersion = "2026.09.05-0"
 
 type ObsBatchSetStorageClassInput struct {
 	Path        string
@@ -120,15 +121,15 @@ func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, base
 		basePath.Key += "/"
 	}
 	walker := obsClient.Walk(logger, basePath, -1, false)
+	slot := utils.NewSlot(max(concurrency, 1))
 	if noProg {
-		utils.ParallelMap(
+		slot.Map(
 			func(path obs.ObsPathContent) {
 				if !path.IsDir() {
 					obsClient.SetStorageClass(logger, basePath.WithKey(path.Key), storageClass)
 				}
 			},
-			walker,
-			concurrency,
+			slices.Collect(walker),
 		)
 	} else {
 		var keys []string
@@ -139,15 +140,15 @@ func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, base
 				total += 1
 			}
 		}
-		prog, _ := utils.NewProgressBar().WithTitle("Setting Storage Class").WithTotal(total).Start()
-		defer prog.Stop()
-		utils.ParallelMap(
+		ctx, done := context.WithCancel(context.Background())
+		prog, _ := utils.NewProgressBar(ctx).WithTitle("Setting Storage Class").WithTotal(total).Start()
+		defer done()
+		slot.Map(
 			func(key string) {
 				obsClient.SetStorageClass(logger, basePath.WithKey(key), storageClass)
 				prog.Increment()
 			},
-			slices.Values(keys),
-			concurrency,
+			keys,
 		)
 	}
 }

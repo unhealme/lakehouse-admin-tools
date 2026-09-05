@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"os/signal"
 	"syscall"
@@ -8,16 +9,22 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func NewProgressBar() *pterm.ProgressbarPrinter {
+func NewProgressBar(ctx context.Context) *pterm.ProgressbarPrinter {
 	prog := pterm.DefaultProgressbar
-	go progressBarStopper(&prog)
+	go progressBarStopper(ctx, &prog)
 	return &prog
 }
 
-func progressBarStopper(prog *pterm.ProgressbarPrinter) {
+func progressBarStopper(ctx context.Context, prog *pterm.ProgressbarPrinter) {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	status := <-sig
-	prog.Stop()
-	os.Exit(int(status.(syscall.Signal)))
+	select {
+	case status := <-sig:
+		prog.Stop()
+		os.Exit(int(status.(syscall.Signal)))
+	case <-ctx.Done():
+		prog.Stop()
+		signal.Stop(sig)
+		return
+	}
 }

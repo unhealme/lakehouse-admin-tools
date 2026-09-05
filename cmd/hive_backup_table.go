@@ -2,18 +2,19 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"iter"
 	"os"
 	"strings"
 
-	"github.com/goccy/go-json"
+	json "github.com/goccy/go-json"
 	"github.com/pterm/pterm"
 	cmd_args "github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const HiveBackupTableVersion = "2026.08.12-0"
+const HiveBackupTableVersion = "2026.09.05-0"
 
 func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 	logger.Debug("using backup table args.", logger.Args(internal.ToArgs(*args)...))
@@ -58,6 +59,7 @@ func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 	tableInputs = utils.SliceDedup(tableInputs)
 
 	var tables []backupHiveTableResult
+	slot := utils.NewSlot(max(args.Concurrency, 1))
 	if args.Fixed {
 		tables = make([]backupHiveTableResult, len(tableInputs))
 		for _, table := range tableInputs {
@@ -96,7 +98,7 @@ func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 				}
 			}
 		}
-		for fetchedTables := range utils.ParallelMapOrdered(fetchTables, tableInputs, args.Concurrency) {
+		for fetchedTables := range slot.MapValue(fetchTables, tableInputs, true) {
 			for table := range fetchedTables {
 				tables = append(tables, table)
 			}
@@ -106,8 +108,9 @@ func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 
 	var prog *pterm.ProgressbarPrinter
 	if !args.NoProg && args.OutputFile != "" {
-		prog, _ = utils.NewProgressBar().WithTitle("Backup tables").WithTotal(len(tables)).Start()
-		defer prog.Stop()
+		ctx, done := context.WithCancel(context.Background())
+		prog, _ = utils.NewProgressBar(ctx).WithTitle("Backup tables").WithTotal(len(tables)).Start()
+		defer done()
 	}
 	fetchResult := func(t backupHiveTableResult) *backupHiveTableResult {
 		var err error
@@ -126,7 +129,7 @@ func HiveBackupTable(logger *pterm.Logger, args *cmd_args.HiveBackupTableArgs) {
 		}
 		return &t
 	}
-	for result := range utils.ParallelMapOrdered(fetchResult, tables, args.Concurrency) {
+	for result := range slot.MapValue(fetchResult, tables, true) {
 		utils.WriteOutput(result)
 	}
 }

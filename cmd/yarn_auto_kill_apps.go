@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"context"
+
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/args"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
@@ -31,8 +33,9 @@ func YarnAutoKillApps(logger *pterm.Logger, args *args.YarnAutoKillAppsArgs) {
 		logger.Info("yarn applications filtered.", logger.Args("app to kill", total))
 		var prog *pterm.ProgressbarPrinter
 		if !args.NoProg {
-			prog, _ = utils.NewProgressBar().WithTitle("Killing yarn applications").WithTotal(total).Start()
-			defer prog.Stop()
+			ctx, done := context.WithCancel(context.Background())
+			prog, _ = utils.NewProgressBar(ctx).WithTitle("Killing yarn applications").WithTotal(total).Start()
+			defer done()
 		}
 		for _, app := range appToKill {
 			var err error
@@ -42,7 +45,8 @@ func YarnAutoKillApps(logger *pterm.Logger, args *args.YarnAutoKillAppsArgs) {
 			if err != nil {
 				logger.Error("unable to kill yarn application.", logger.Args("id", app.Id, "error", err))
 			} else {
-				logger.Info("yarn application killed.",
+				logger.Info(
+					"yarn application killed.",
 					logger.Args(
 						"id", app.Id,
 						"name", app.Name,

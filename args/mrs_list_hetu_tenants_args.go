@@ -8,7 +8,7 @@ import (
 type MrsListHetuTenantsArgs struct {
 	OutputFile   string `arg:"-o,--" placeholder:"FILE" help:"write result to FILE instead of stdout"`
 	FimClusterId int    `arg:"-,--fim-cluster-id" default:"1" placeholder:"NUM"`
-	FimAddress   string `arg:"-,--fim-url" placeholder:"FIM_ADDRESS"`
+	FimAddress   string `arg:"-,--fim-url,required" placeholder:"FIM_ADDRESS"`
 	NoHeader     bool   `arg:"-,--no-header" help:"do not print header"`
 	LoginUser    string `arg:"-,--user,env:FIM_USER" placeholder:"FIM_USER"`
 

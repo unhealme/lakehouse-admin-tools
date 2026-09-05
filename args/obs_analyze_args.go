@@ -7,6 +7,7 @@ type ObsAnalyzeArgs struct {
 	Fixed       bool     `arg:"-F,--" help:"PATH is fixed string"`
 	Concurrency int      `arg:"-j,--" default:"4" help:"max job concurrency" placeholder:"NUM"`
 	Summarize   bool     `arg:"-s,--summarize" help:"show total statistics for all input paths"`
+	MinChunks   int      `arg:"-,--chunks" default:"1" help:"split PATH into minimum of NUM chunks" placeholder:"NUM"`
 	CsvOut      string   `arg:"-,--write-csv" help:"write csv format output to FILE" placeholder:"FILE"`
 	JsonOut     string   `arg:"-,--write-json" help:"write json format output to FILE" placeholder:"FILE"`
 	NoProg      bool     `arg:"-,--no-progress" help:"disable progress bar"`

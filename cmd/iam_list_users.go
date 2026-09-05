@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/csv"
 	"os"
 	"slices"
@@ -15,7 +16,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/utils"
 )
 
-const IamListUsersVersion = "2026.08.05-0"
+const IamListUsersVersion = "2026.09.05-0"
 
 func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 	logger.Debug("using iam list users args.", logger.Args(internal.ToArgs(*args)...))
@@ -50,15 +51,17 @@ func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 				"AccessMode",
 				"Groups",
 				"LastLogin",
-			}); err != nil {
+			},
+		); err != nil {
 			panic(err)
 		}
 	}
 
 	var prog *pterm.ProgressbarPrinter
 	if !args.NoProg && args.OutputFile != "" {
-		prog, _ = utils.NewProgressBar().WithTitle("Listing users").WithTotal(len(users)).Start()
-		defer prog.Stop()
+		ctx, done := context.WithCancel(context.Background())
+		prog, _ = utils.NewProgressBar(ctx).WithTitle("Listing users").WithTotal(len(users)).Start()
+		defer done()
 	}
 
 	serializeIamUser := func(user *model.KeystoneListUsersResult) []string {
@@ -104,7 +107,7 @@ func IamListUsers(logger *pterm.Logger, args *args.IamListUsersArgs) {
 			lastLoginStr,
 		}
 	}
-	for result := range utils.ParallelMapOrdered(serializeIamUser, users, max(args.Concurrency, 1)) {
+	for result := range utils.NewSlot(max(args.Concurrency, 1)).MapValue(serializeIamUser, users, false) {
 		if err := csvWriter.Write(result); err != nil {
 			panic(err)
 		}

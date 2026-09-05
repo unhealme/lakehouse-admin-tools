@@ -19,7 +19,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/yarn"
 )
 
-var logger = pterm.DefaultLogger.WithLevel(pterm.LogLevelInfo).WithWriter(os.Stderr)
+var logger = pterm.DefaultLogger.WithLevel(pterm.LogLevelInfo).WithWriter(os.Stderr).WithMaxWidth(200)
 
 func main() {
 	var args config.Arguments
@@ -150,11 +150,12 @@ func main() {
 			if subArgs.LoginUser == "" && cfg.Fim != nil {
 				subArgs.LoginUser = cfg.Fim.User
 			}
-			if subArgs.FimAddress == "" && cfg.Fim != nil {
-				subArgs.FimAddress = cfg.Fim.Address
+			address, mapped := cfg.Fim.Addresses[subArgs.FimAddress]
+			if !mapped {
+				address = subArgs.FimAddress
 			}
 
-			fimClient, err := fim.NewClient(subArgs.FimAddress)
+			fimClient, err := fim.NewClient(address)
 			if err != nil {
 				logger.Fatal("unable to create FIM client.", logger.Args("error", err))
 			}
@@ -169,11 +170,12 @@ func main() {
 			if subArgs.LoginUser == "" && cfg.Fim != nil {
 				subArgs.LoginUser = cfg.Fim.User
 			}
-			if subArgs.FimAddress == "" && cfg.Fim != nil {
-				subArgs.FimAddress = cfg.Fim.Address
+			address, mapped := cfg.Fim.Addresses[subArgs.FimAddress]
+			if !mapped {
+				address = subArgs.FimAddress
 			}
 
-			fimClient, err := fim.NewClient(subArgs.FimAddress)
+			fimClient, err := fim.NewClient(address)
 			if err != nil {
 				logger.Fatal("unable to create FIM client.", logger.Args("error", err))
 			}

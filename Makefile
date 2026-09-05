@@ -5,6 +5,8 @@ override LDFLAGS         := -s -w
 override LDFLAGS_STATIC2 := $(LDFLAGS) -extldflags=-static
 override LDFLAGS_STATIC  := $(LDFLAGS_STATIC2) -linkmode=external
 
+.PHONY: build
+
 build:
 	go build -trimpath -ldflags='$(LDFLAGS)' -tags kerberos -o build/$(prog)
 
