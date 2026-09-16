@@ -8,11 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	json "github.com/goccy/go-json"
 	req "github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	"github.com/tidwall/gjson"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/hetu"
 )
 
@@ -140,12 +139,6 @@ func NewClient(fimAddress string) (*FimClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	httpClient := req.C().
-		DisableAutoDecode().
-		EnableInsecureSkipVerify().
-		OnAfterResponse(internal.HttpNotOkMiddleware).
-		SetBaseURL(url.String()).
-		SetJsonMarshal(json.Marshal).
-		SetJsonUnmarshal(json.Unmarshal)
-	return &FimClient{Http: httpClient, FimUrl: url}, nil
+	hc := clients.NewHttpClient().SetBaseURL(url.String())
+	return &FimClient{Http: hc, FimUrl: url}, nil
 }

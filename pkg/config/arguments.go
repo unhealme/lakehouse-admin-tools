@@ -80,6 +80,7 @@ type UamArguments struct {
 
 type YarnArguments struct {
 	AutoKillApps *arguments.YarnAutoKillAppsArgs `arg:"subcommand:auto-kill" yaml:"-"`
+	ListApps     *arguments.YarnListAppsArgs     `arg:"subcommand:list-apps" yaml:"-"`
 
 	RMAddress CommaSeparatedString `arg:"-u,--rm-url" placeholder:"RM_ADDRESS" yaml:"rm_address"`
 }
@@ -107,7 +108,7 @@ type Arguments struct {
 
 func (Arguments) Epilogue() string {
 	b := &strings.Builder{}
-	fmt.Fprintln(b, "Components:")
+	b.WriteString("Components:\n")
 	for _, comp := range slices.Sorted(maps.Keys(compVer)) {
 		fmt.Fprintf(b, "  %-32s %s\n", comp, compVer[comp])
 	}

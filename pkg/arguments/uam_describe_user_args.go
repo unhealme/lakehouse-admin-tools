@@ -28,7 +28,7 @@ const (
 )
 
 func (f *UamDescribeUserPrintFormat) UnmarshalText(buf []byte) (e error) {
-	switch fmt := string(buf); strings.TrimSpace(strings.ToLower(fmt)) {
+	switch fmt := string(buf); strings.ToLower(strings.TrimSpace(fmt)) {
 	case "default":
 		*f = UamDescribeUsePrintFormatDefault
 	case "csv":

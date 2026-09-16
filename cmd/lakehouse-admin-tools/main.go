@@ -250,7 +250,7 @@ func main() {
 			commands.UamListMembers(logger, subArgs)
 		}
 	case args.Yarn != nil:
-		yarnClient, err := yarn.NewClient([]string(cfg.Yarn.RMAddress))
+		yarnClient, err := yarn.NewClient(logger, []string(cfg.Yarn.RMAddress))
 		if err != nil {
 			logger.Fatal("unable to create YARN client.", logger.Args("error", err))
 		}
@@ -262,6 +262,11 @@ func main() {
 			subArgs.YarnClient = yarnClient
 
 			commands.YarnAutoKillApps(logger, subArgs)
+		case args.Yarn.ListApps != nil:
+			subArgs := args.Yarn.ListApps
+			subArgs.YarnClient = yarnClient
+
+			commands.YarnListApps(logger, subArgs)
 		}
 	}
 }

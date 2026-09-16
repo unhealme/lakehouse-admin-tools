@@ -2,7 +2,7 @@ package config
 
 import "github.com/unhealme/lakehouse-admin-tools/pkg/commands"
 
-const Version = "0.13.2"
+const Version = "0.14.0"
 
 var compVer = map[string]string{
 	"dataarts-create-hetu-connection": commands.DataArtsCreateHetuConnectionVersion,
@@ -20,4 +20,5 @@ var compVer = map[string]string{
 	"uam-describe-user":               commands.UamDescribeUserVersion,
 	"uam-list-members":                commands.UamListMembersVersion,
 	"yarn-auto-kill-apps":             commands.YarnAutoKillAppsVersion,
+	"yarn-list-apps":                  commands.YarnListAppsVersion,
 }

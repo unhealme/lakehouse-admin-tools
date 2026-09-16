@@ -1,30 +1,21 @@
 package yarn
 
 import (
-	"bytes"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 
-	json "github.com/goccy/go-json"
-	"github.com/jcmturner/gokrb5/v8/client"
-	"github.com/jcmturner/gokrb5/v8/config"
-	"github.com/jcmturner/gokrb5/v8/credentials"
+	req "github.com/imroc/req/v3"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 	"github.com/pterm/pterm"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
 )
 
 type YarnRMClient struct {
-	Http   *spnego.Client
+	Http   *req.Client
 	RmUrls []*url.URL
-
-	krbClient *client.Client
 }
 
 func (c *YarnRMClient) Close() {
@@ -33,96 +24,64 @@ func (c *YarnRMClient) Close() {
 }
 
 func (c *YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
-	req, err := http.NewRequest(http.MethodGet, "/ws/v1/cluster/apps", nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	query := req.URL.Query()
-	if states != nil {
+	var apps Applications
+	req := c.Http.R().SetHeader("Content-Type", "application/json").SetSuccessResult(&apps)
+	if len(states) > 0 {
 		var statesString []string
 		for _, state := range states {
 			statesString = append(statesString, string(state))
 		}
-		query.Add("states", strings.Join(statesString, ","))
+		req.SetQueryParam("states", strings.Join(statesString, ","))
 	}
 	if user != "" {
-		query.Add("user", user)
+		req.SetQueryParam("user", user)
 	}
 	if queue != "" {
-		query.Add("queue", queue)
+		req.SetQueryParam("queue", queue)
 	}
 	if limit > 0 {
-		query.Add("limit", strconv.Itoa(limit))
+		req.SetQueryParam("limit", strconv.Itoa(limit))
 	}
-	req.URL.RawQuery = query.Encode()
 
 	logger.Debug("fetching yarn applications.")
-	resp, err := c.failoverDo(logger, req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	var apps Applications
-	if err := json.NewDecoder(resp.Body).Decode(&apps); err != nil {
+	if _, err := req.Get(c.RmUrls[0].JoinPath("/ws/v1/cluster/apps").String()); err != nil {
 		return nil, err
 	}
 	return &apps, nil
 }
 
 func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
-	req, err := http.NewRequest(
-		http.MethodPut,
-		fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id),
-		bytes.NewBuffer([]byte(`{"state":"KILLED"}`)),
-	)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	resp, err := c.failoverDo(logger, req)
-	if err != nil {
-		return err
-	}
-	resp.Body.Close()
-	return nil
+	_, err := c.Http.R().
+		SetBody([]byte(`{"state":"KILLED"}`)).
+		SetHeader("Content-Type", "application/json").
+		Get(c.RmUrls[0].JoinPath(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id)).String())
+	return err
 }
 
-func (c *YarnRMClient) failoverDo(logger *pterm.Logger, req *http.Request) (resp *http.Response, err error) {
-	rmUrl := c.RmUrls[0]
-	for range len(c.RmUrls) {
-		newReq := *req
-		newReq.URL.Scheme, newReq.URL.Host = rmUrl.Scheme, rmUrl.Host
-		logger.Debug("trying url.", logger.Args("url", req.URL.String()))
-		spnego.SetSPNEGOHeader(c.krbClient, &newReq, "")
-		if resp, err = c.Http.Do(&newReq); err != nil {
-			return nil, err
-		}
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			logger.Debug("current url order:", logger.Args("url", c.getUrlOrder()))
-			return
-		}
-		err = internal.HttpNotOkFromResponse(resp)
-		resp.Body.Close()
+func (c *YarnRMClient) failoverRetry(logger *pterm.Logger) req.RetryHookFunc {
+	return func(resp *req.Response, err error) {
+		c.RmUrls = append(c.RmUrls[1:], c.RmUrls[0])
+		rmUrl := c.RmUrls[0]
+		c.Http.SetBaseURL(rmUrl.String())
 
-		c.RmUrls = append(c.RmUrls[1:], rmUrl)
-		rmUrl = c.RmUrls[0]
+		lastReq := resp.Request
+		newUrl := lastReq.URL.Clone()
+		newUrl.Scheme, newUrl.Host = rmUrl.Scheme, rmUrl.Host
+		lastReq.RawURL = newUrl.String()
+		lastReq.Headers.Del(spnego.HTTPHeaderAuthRequest)
+		logger.Debug("swapped urls with new order: " + strings.Join(c.getUrlOrder(), ", "))
 	}
-	return nil, fmt.Errorf("No YARN Resource Manager is available. last error is: %s", err)
 }
 
 func (c YarnRMClient) getUrlOrder() []string {
 	urls := make([]string, len(c.RmUrls))
-	for _, url := range c.RmUrls {
-		urls = append(urls, url.String())
+	for i, url := range c.RmUrls {
+		urls[i] = url.String()
 	}
 	return urls
 }
 
-func NewClient(rmAddresses []string) (*YarnRMClient, error) {
+func NewClient(logger *pterm.Logger, rmAddresses []string) (*YarnRMClient, error) {
 	if len(rmAddresses) < 1 {
 		return nil, errors.New("Atleast one RM Address must be specified")
 	}
@@ -136,20 +95,13 @@ func NewClient(rmAddresses []string) (*YarnRMClient, error) {
 		rmUrls = append(rmUrls, rmUrl)
 	}
 
-	krbConfig, err := config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"))
+	hc, err := clients.NewKerberosHttpClient("")
 	if err != nil {
 		return nil, err
 	}
-	krbCache, err := credentials.LoadCCache(internal.GetEnv("KRB5CCNAME", fmt.Sprintf("/tmp/krb5cc_%d", os.Getuid())))
-	if err != nil {
-		return nil, err
-	}
-	krbClient, err := client.NewFromCCache(krbCache, krbConfig)
-	if err != nil {
-		return nil, err
-	}
-	tr := http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}
-	httpClient := &http.Client{Transport: &tr}
-
-	return &YarnRMClient{spnego.NewClient(krbClient, httpClient, ""), rmUrls, krbClient}, nil
+	c := new(YarnRMClient{hc, rmUrls})
+	hc.SetBaseURL(rmUrls[0].String()).
+		SetCommonRetryCount(len(rmUrls) - 1).
+		SetCommonRetryHook(c.failoverRetry(logger))
+	return c, nil
 }

@@ -27,8 +27,8 @@ const (
 	HiveBackupTableOutputJson
 )
 
-func (f *HiveBackupTableOutputFmt) UnmarshalText(buf []byte) (e error) {
-	switch fmt := string(buf); strings.TrimSpace(strings.ToLower(fmt)) {
+func (f *HiveBackupTableOutputFmt) UnmarshalText(buf []byte) error {
+	switch fmt := string(buf); strings.ToLower(strings.TrimSpace(fmt)) {
 	case "csv":
 		*f = HiveBackupTableOutputCsv
 	case "json":
@@ -36,5 +36,5 @@ func (f *HiveBackupTableOutputFmt) UnmarshalText(buf []byte) (e error) {
 	default:
 		return errors.New("invalid output format: " + fmt)
 	}
-	return
+	return nil
 }

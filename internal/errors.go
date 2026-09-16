@@ -42,5 +42,5 @@ func HttpNotOkMiddleware(client *req.Client, resp *req.Response) error {
 			Body:    body,
 		}
 	}
-	return nil
+	return resp.Err
 }

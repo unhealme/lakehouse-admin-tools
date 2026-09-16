@@ -6,11 +6,10 @@ import (
 	"strconv"
 	"time"
 
-	json "github.com/goccy/go-json"
 	req "github.com/imroc/req/v3"
 	"github.com/pterm/pterm"
 	"github.com/tidwall/gjson"
-	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
 )
 
 type HetuClient struct {
@@ -162,13 +161,8 @@ func queryTs() string {
 }
 
 func NewClient(hetuAuth *HetuAuth) *HetuClient {
-	httpClient := req.C().
-		DisableAutoDecode().
-		EnableInsecureSkipVerify().
-		OnAfterResponse(internal.HttpNotOkMiddleware).
+	hc := clients.NewHttpClient().
 		SetBaseURL(hetuAuth.Url.String()).
-		SetCommonCookies(hetuAuth.SessionId).
-		SetJsonMarshal(json.Marshal).
-		SetJsonUnmarshal(json.Unmarshal)
-	return &HetuClient{Http: httpClient, HetuUrl: hetuAuth.Url}
+		SetCommonCookies(hetuAuth.SessionId)
+	return &HetuClient{Http: hc, HetuUrl: hetuAuth.Url}
 }
