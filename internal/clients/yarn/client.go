@@ -44,17 +44,19 @@ func (c *YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSt
 	}
 
 	logger.Debug("fetching yarn applications.")
-	if _, err := req.Get(c.RmUrls[0].JoinPath("/ws/v1/cluster/apps").String()); err != nil {
+	if _, err := req.Get("/ws/v1/cluster/apps"); err != nil {
 		return nil, err
 	}
 	return &apps, nil
 }
 
+var killAppBody = []byte(`{"state":"KILLED"}`)
+
 func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
 	_, err := c.Http.R().
-		SetBody([]byte(`{"state":"KILLED"}`)).
+		SetBody(killAppBody).
 		SetHeader("Content-Type", "application/json").
-		Get(c.RmUrls[0].JoinPath(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id)).String())
+		Get(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id))
 	return err
 }
 

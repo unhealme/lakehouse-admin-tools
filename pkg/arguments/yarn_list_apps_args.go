@@ -9,7 +9,7 @@ import (
 
 type YarnListAppsArgs struct {
 	Queue      string                `arg:"-Q,--queue" help:"filter applications by queue" placeholder:"NAME"`
-	Format     YarnListAppsOutputFmt `arg:"-f,--format" default:"csv" help:"output format" placeholder:"{csv,json}"`
+	Format     YarnListAppsOutputFmt `arg:"-f,--format" default:"table" help:"output format" placeholder:"{csv,json,table}"`
 	Limit      int                   `arg:"-l,--limit" help:"applications limit" placeholder:"NUM"`
 	States     yarnListAppsStates    `arg:"-s,--states" help:"yarn application states as a comma delimited string" placeholder:"STATES"`
 	User       string                `arg:"-u,--user" help:"filter applications by user" placeholder:"NAME"`
@@ -56,6 +56,7 @@ type YarnListAppsOutputFmt int
 const (
 	YarnListAppsOutputCsv YarnListAppsOutputFmt = iota + 1
 	YarnListAppsOutputJson
+	YarnListAppsOutputTable
 )
 
 func (f *YarnListAppsOutputFmt) UnmarshalText(buf []byte) error {
@@ -64,6 +65,8 @@ func (f *YarnListAppsOutputFmt) UnmarshalText(buf []byte) error {
 		*f = YarnListAppsOutputCsv
 	case "json":
 		*f = YarnListAppsOutputJson
+	case "table":
+		*f = YarnListAppsOutputTable
 	default:
 		return errors.New("invalid output format: " + fmt)
 	}

@@ -12,33 +12,38 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-const YarnListAppsVersion = "2026.09.16-0"
+const YarnListAppsVersion = "2026.09.17-0"
 
 func YarnListApps(logger *pterm.Logger, args *arguments.YarnListAppsArgs) {
 	logger.Debug("using list apps args.", logger.Args(internal.ToArgs(*args)...))
 
+	outputHeaders := []string{
+		"Id",
+		"Name",
+		"Type",
+		"QueueUser",
+		"Queue",
+		"StartTime",
+		"FinishTime",
+		"FinalState",
+		"Memory",
+		"CPU",
+	}
 	switch args.Format {
 	case arguments.YarnListAppsOutputCsv:
-		headers := []string{
-			"Id",
-			"Name",
-			"Type",
-			"QueueUser",
-			"Queue",
-			"StartTime",
-			"FinishTime",
-			"FinalState",
-			"Memory",
-			"CPU",
-		}
-		if args.NoHeader {
-			headers = nil
+		var headers []string
+		if !args.NoHeader {
+			headers = outputHeaders
 		}
 		if err := utils.OpenCsvWriter(args.OutputFile, headers); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
 		}
 	case arguments.YarnListAppsOutputJson:
 		if err := utils.OpenJsonWriter(args.OutputFile); err != nil {
+			logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
+		}
+	case arguments.YarnListAppsOutputTable:
+		if err := utils.OpenTableWriter(args.OutputFile, outputHeaders); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
 		}
 	}
@@ -88,5 +93,15 @@ func (a yarnListAppsResult) SerCsv() []string {
 
 func (a yarnListAppsResult) SerJson() (v []byte) {
 	v, _ = json.Marshal(a)
+	return
+}
+
+func (a yarnListAppsResult) SerTable() (v []string) {
+	v = a.SerCsv()
+	for n, i := range v {
+		if len(i) > 50 {
+			v[n] = i[:51] + "..."
+		}
+	}
 	return
 }

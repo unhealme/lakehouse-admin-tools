@@ -18,15 +18,15 @@ func SPNEGORetryCond(resp *http.Response, err error) bool {
 		resp.Header.Get(spnego.HTTPHeaderAuthResponse) == spnego.HTTPHeaderAuthResponseValueKey
 }
 
-func SPNEGORoundTripper(krbClient *client.Client, spn string) req.HttpRoundTripWrapperFunc {
+func SPNEGORoundTripper(kc *client.Client, spn string) req.HttpRoundTripWrapperFunc {
 	return func(rt http.RoundTripper) req.HttpRoundTripFunc {
 		return func(req *http.Request) (resp *http.Response, err error) {
 			resp, err = rt.RoundTrip(req)
 			if SPNEGORetryCond(resp, err) {
-				if err = spnego.SetSPNEGOHeader(krbClient, resp.Request, spn); err != nil {
-					return
+				if err = spnego.SetSPNEGOHeader(kc, resp.Request, spn); err != nil {
+					return nil, err
 				}
-				return SPNEGORoundTripper(krbClient, spn)(rt)(resp.Request)
+				return SPNEGORoundTripper(kc, spn)(rt)(resp.Request)
 			}
 			return
 		}

@@ -149,3 +149,7 @@ func (t backupHiveTableResult) SerJson() (v []byte) {
 	v, _ = json.Marshal(t)
 	return
 }
+
+func (t backupHiveTableResult) SerTable() []string {
+	return nil
+}

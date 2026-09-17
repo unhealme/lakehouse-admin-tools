@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"sync"
+
+	"github.com/pterm/pterm"
 )
 
 type CsvSer interface {
@@ -16,9 +18,14 @@ type JsonSer interface {
 	SerJson() []byte
 }
 
+type TableSer interface {
+	SerTable() []string
+}
+
 type OutSer interface {
 	CsvSer
 	JsonSer
+	TableSer
 }
 
 var (
@@ -28,6 +35,10 @@ var (
 
 	jsonOutputFile   io.WriteCloser
 	jsonOutputWriter *bufio.Writer
+
+	tableOutputBuffer pterm.TableData
+	tableOutputFile   io.WriteCloser
+	tableOutputWriter *pterm.TablePrinter
 )
 
 var printCsvHeader = sync.OnceFunc(func() {
@@ -63,19 +74,45 @@ func OpenJsonWriter(file string) (err error) {
 	return
 }
 
+func OpenTableWriter(file string, headers []string) (err error) {
+	if file == "" {
+		tableOutputFile = os.Stdout
+	} else if tableOutputFile, err = os.OpenFile(file,
+		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
+		0o644); err != nil {
+		return
+	}
+	tableOutputWriter = pterm.DefaultTable.WithHeaderRowSeparator("─").WithWriter(tableOutputFile)
+	if len(headers) > 0 {
+		tableOutputWriter = tableOutputWriter.WithHasHeader()
+		tableOutputBuffer = append(tableOutputBuffer, headers)
+	}
+	return
+}
+
 func CloseOutput() {
 	if csvOutputWriter != nil {
 		csvOutputWriter.Flush()
-		if csvOutputFile != os.Stdout {
+		if mustClose(csvOutputFile) {
 			csvOutputFile.Close()
 		}
 	}
 	if jsonOutputWriter != nil {
 		jsonOutputWriter.Flush()
-		if jsonOutputFile != os.Stdout {
+		if mustClose(jsonOutputFile) {
 			jsonOutputFile.Close()
 		}
 	}
+	if tableOutputWriter != nil {
+		tableOutputWriter.WithData(tableOutputBuffer).Render()
+		if mustClose(tableOutputFile) {
+			tableOutputFile.Close()
+		}
+	}
+}
+
+func mustClose(f io.Closer) bool {
+	return f != os.Stdout && f != os.Stderr
 }
 
 func WriteCsv(v CsvSer) {
@@ -91,11 +128,18 @@ func WriteJson(v JsonSer) {
 	}
 }
 
+func WriteTable(v TableSer) {
+	tableOutputBuffer = append(tableOutputBuffer, v.SerTable())
+}
+
 func WriteOutput(v OutSer) {
 	if csvOutputWriter != nil {
 		WriteCsv(v)
 	}
 	if jsonOutputWriter != nil {
 		WriteJson(v)
+	}
+	if tableOutputWriter != nil {
+		WriteTable(v)
 	}
 }

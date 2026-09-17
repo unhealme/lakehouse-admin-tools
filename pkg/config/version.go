@@ -2,7 +2,7 @@ package config
 
 import "github.com/unhealme/lakehouse-admin-tools/pkg/commands"
 
-const Version = "0.14.0"
+const Version = "0.14.1"
 
 var compVer = map[string]string{
 	"dataarts-create-hetu-connection": commands.DataArtsCreateHetuConnectionVersion,

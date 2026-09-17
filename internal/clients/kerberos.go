@@ -13,19 +13,19 @@ import (
 )
 
 func NewKerberosClient() (*client.Client, error) {
-	krbConfig, err := config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"))
+	conf, err := config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"))
 	if err != nil {
 		return nil, err
 	}
-	krbCache, err := credentials.LoadCCache(internal.GetEnv("KRB5CCNAME", fmt.Sprintf("/tmp/krb5cc_%d", os.Getuid())))
+	cc, err := credentials.LoadCCache(internal.GetEnv("KRB5CCNAME", fmt.Sprintf("/tmp/krb5cc_%d", os.Getuid())))
 	if err != nil {
 		return nil, err
 	}
-	krbClient, err := client.NewFromCCache(krbCache, krbConfig)
+	kc, err := client.NewFromCCache(cc, conf)
 	if err != nil {
 		return nil, err
 	}
-	return krbClient, nil
+	return kc, nil
 }
 
 func NewKerberosHttpClient(spn string) (*req.Client, error) {

@@ -102,6 +102,10 @@ func (p ObsPathAnalyzed) SerJson() (v []byte) {
 	return
 }
 
+func (p ObsPathAnalyzed) SerTable() []string {
+	return p.SerCsv()
+}
+
 func SameObsKey(x, y string) bool {
 	return strings.TrimSuffix(x, "/") == strings.TrimSuffix(y, "/")
 }
