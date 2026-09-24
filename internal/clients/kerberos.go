@@ -3,6 +3,7 @@ package clients
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	req "github.com/imroc/req/v3"
 	"github.com/jcmturner/gokrb5/v8/client"
@@ -12,20 +13,22 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-func NewKerberosClient() (*client.Client, error) {
-	conf, err := config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf"))
-	if err != nil {
-		return nil, err
+func NewKerberosClient() (kc *client.Client, err error) {
+	var (
+		conf *config.Config
+		cc   *credentials.CCache
+	)
+	if conf, err = config.Load(internal.GetEnv("KRB5_CONFIG", "/etc/krb5.conf")); err == nil {
+		if cc, err = credentials.LoadCCache(
+			strings.TrimPrefix(internal.GetEnv(
+				"KRB5CCNAME",
+				fmt.Sprintf("/tmp/krb5cc_%d", os.Getuid()),
+			), "FILE:"),
+		); err == nil {
+			kc, err = client.NewFromCCache(cc, conf)
+		}
 	}
-	cc, err := credentials.LoadCCache(internal.GetEnv("KRB5CCNAME", fmt.Sprintf("/tmp/krb5cc_%d", os.Getuid())))
-	if err != nil {
-		return nil, err
-	}
-	kc, err := client.NewFromCCache(cc, conf)
-	if err != nil {
-		return nil, err
-	}
-	return kc, nil
+	return
 }
 
 func NewKerberosHttpClient(spn string) (*req.Client, error) {
