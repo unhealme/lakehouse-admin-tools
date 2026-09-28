@@ -3,11 +3,11 @@ package commands
 import (
 	"bufio"
 	"context"
+	json "encoding/json/v2"
 	"iter"
 	"os"
 	"strings"
 
-	json "github.com/goccy/go-json"
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"

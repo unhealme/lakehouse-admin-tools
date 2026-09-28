@@ -1,6 +1,7 @@
 package obs
 
 import (
+	json "encoding/json/v2"
 	"fmt"
 	"path"
 	"regexp"
@@ -8,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	json "github.com/goccy/go-json"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )

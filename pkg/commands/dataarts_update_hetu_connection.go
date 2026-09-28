@@ -1,9 +1,9 @@
 package commands
 
 import (
+	"encoding/json"
 	"strings"
 
-	json "github.com/goccy/go-json"
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"

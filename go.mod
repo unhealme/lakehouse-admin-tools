@@ -7,7 +7,6 @@ require (
 	github.com/beltran/gohive/v2 v2.1.0
 	github.com/go-ldap/ldap/v3 v3.4.14
 	github.com/gobwas/glob v1.0.0
-	github.com/goccy/go-json v0.11.1
 	github.com/goccy/go-yaml v1.19.2
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.6+incompatible
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.217

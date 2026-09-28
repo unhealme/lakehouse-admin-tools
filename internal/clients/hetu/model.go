@@ -1,10 +1,9 @@
 package hetu
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/url"
-
-	json "github.com/goccy/go-json"
 )
 
 type HetuAuth struct {
