@@ -13,7 +13,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-const ObsAnalyzeVersion = "2026.09.05-1"
+const ObsAnalyzeVersion = "2026.09.24-0"
 
 func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -72,10 +72,9 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 	}
 
 	var (
-		totalSize    atomic.Int64
-		totalDirs    atomic.Int64
-		totalFiles   atomic.Int64
-		lastModified atomic.Int64
+		filesHot, filesWarm, filesCold,
+		lastModified,
+		totalSize, totalDirs, totalFiles atomic.Int64
 
 		slot = utils.NewSlot(args.Concurrency)
 	)
@@ -96,16 +95,23 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 				pathExists = true
 				utils.WriteOutput(stats)
 				pterm.Printf(
-					"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files), last modified: %s\n",
+					"obs://%s/%s: size: %d (%s), objects: %d (%d dirs, %d files [%d/%d/%d]), last modified: %s\n",
 					stats.Bucket, stats.Key,
 					stats.Size, utils.FormatSize(stats.Size),
 					stats.DirCount+stats.FileCount,
 					stats.DirCount, stats.FileCount,
+					stats.Fsc.Hot, stats.Fsc.Warm, stats.Fsc.Cold,
 					time.Unix(0, stats.LastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 				)
+
+				filesHot.Add(stats.Fsc.Hot)
+				filesWarm.Add(stats.Fsc.Warm)
+				filesCold.Add(stats.Fsc.Cold)
+
 				totalSize.Add(stats.Size)
 				totalDirs.Add(stats.DirCount)
 				totalFiles.Add(stats.FileCount)
+
 				for {
 					cur := lastModified.Load()
 					if stats.LastModified <= cur {
@@ -151,10 +157,11 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 	if args.Summarize {
 		pterm.Println()
 		pterm.Printf(
-			"Total size: %d (%s), objects: %d (%d dirs, %d files), last modified: %s\n",
+			"Total size: %d (%s), objects: %d (%d dirs, %d files [%d/%d/%d]), last modified: %s\n",
 			totalSize.Load(), utils.FormatSize(totalSize.Load()),
 			totalDirs.Load()+totalFiles.Load(),
 			totalDirs.Load(), totalFiles.Load(),
+			filesHot.Load(), filesWarm.Load(), filesCold.Load(),
 			time.Unix(0, lastModified.Load()*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 		)
 	}

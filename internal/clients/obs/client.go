@@ -102,6 +102,14 @@ func (c ObsClient) Analyze(logger *pterm.Logger, slot *utils.Slot, minChunks int
 				if op.Content.LastModified.UnixMilli() > stats.LastModified {
 					stats.LastModified = op.Content.LastModified.UnixMilli()
 				}
+				switch string(op.Content.StorageClass) {
+				case "STANDARD":
+					stats.Fsc.Hot++
+				case "WARM":
+					stats.Fsc.Warm++
+				case "COLD", "DEEP_ARCHIVE", "GLACIER":
+					stats.Fsc.Cold++
+				}
 			}
 		}
 	}

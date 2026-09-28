@@ -62,9 +62,12 @@ type ObsPathContent struct {
 }
 
 func NewObsPathContent(depth int, bucket, key string, content *obs.Content) ObsPathContent {
-	v := ObsPathContent{Depth: depth, Content: content}
-	v.Bucket = bucket
-	v.Key = strings.TrimPrefix(key, "/")
+	v := ObsPathContent{
+		Depth:   depth,
+		Bucket:  bucket,
+		Key:     strings.TrimPrefix(key, "/"),
+		Content: content,
+	}
 	return v
 }
 
@@ -74,6 +77,9 @@ var ObsPathAnalyzedHeader = []string{
 	"Size",
 	"DirCount",
 	"FileCount",
+	"FilesHot",
+	"FilesWarm",
+	"FilesCold",
 	"LastModified",
 }
 
@@ -84,6 +90,11 @@ type ObsPathAnalyzed struct {
 	FileCount    int64 `json:"file_count"`
 	Size         int64 `json:"size"`
 	LastModified int64 `json:"last_modified"` // unix_milli
+	Fsc          struct {
+		Hot  int64 `json:"hot"`
+		Warm int64 `json:"warm"`
+		Cold int64 `json:"cold"`
+	} `json:"files_storage_class"`
 }
 
 func (p ObsPathAnalyzed) SerCsv() []string {
@@ -93,6 +104,9 @@ func (p ObsPathAnalyzed) SerCsv() []string {
 		utils.FormatSize(p.Size),
 		strconv.FormatInt(p.DirCount, 10),
 		strconv.FormatInt(p.FileCount, 10),
+		strconv.FormatInt(p.Fsc.Hot, 10),
+		strconv.FormatInt(p.Fsc.Warm, 10),
+		strconv.FormatInt(p.Fsc.Cold, 10),
 		time.Unix(0, p.LastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 	}
 }
