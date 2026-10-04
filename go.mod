@@ -5,16 +5,19 @@ go 1.27.0
 require (
 	github.com/alexflint/go-arg v1.6.1
 	github.com/beltran/gohive/v2 v2.1.0
+	github.com/bytedance/sonic v1.15.4
 	github.com/go-ldap/ldap/v3 v3.4.14
 	github.com/gobwas/glob v1.0.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.6+incompatible
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.217
 	github.com/imroc/req/v3 v3.61.0
-	github.com/itchyny/timefmt-go v0.1.8
+	github.com/itchyny/timefmt-go v0.1.9
 	github.com/jcmturner/gokrb5/v8 v8.4.4
+	github.com/klauspost/compress v1.20.1
+	github.com/parquet-go/parquet-go v0.32.0
 	github.com/pterm/pterm v0.12.83
-	github.com/shirou/gopsutil/v4 v4.26.8
+	github.com/shirou/gopsutil/v4 v4.26.9
 	github.com/tidwall/gjson v1.19.0
 	go.uber.org/atomic v1.12.0
 )
@@ -26,11 +29,14 @@ require (
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/alexbrainman/sspi v0.0.0-20250919150558-7d374ff0d59e // indirect
 	github.com/alexflint/go-scalar v1.2.0 // indirect
-	github.com/andybalholm/brotli v1.2.5 // indirect
-	github.com/apache/thrift v0.24.0 // indirect
+	github.com/andybalholm/brotli v1.2.6 // indirect
+	github.com/apache/thrift v0.25.0 // indirect
 	github.com/beltran/gosasl v1.0.0 // indirect
 	github.com/beltran/gssapi v0.0.0-20200324152954-d86554db4bab // indirect
+	github.com/bytedance/gopkg v0.1.4 // indirect
+	github.com/bytedance/sonic/loader v0.5.2 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/cloudwego/base64x v0.1.7 // indirect
 	github.com/containerd/console v1.0.5 // indirect
 	github.com/ebitengine/purego v0.11.1 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
@@ -46,12 +52,15 @@ require (
 	github.com/jcmturner/goidentity/v6 v6.0.1 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/json-iterator/go v1.1.13-0.20220915233716-71ac16282d12 // indirect
-	github.com/klauspost/compress v1.20.1 // indirect
+	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
+	github.com/parquet-go/bitpack v1.1.0 // indirect
+	github.com/parquet-go/jsonlite v1.5.5 // indirect
+	github.com/pierrec/lz4/v4 v4.1.33 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20260916203055-22a1a467d9f0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
@@ -62,13 +71,17 @@ require (
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
+	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/twpayne/go-geom v1.7.0 // indirect
 	github.com/xo/terminfo v1.2.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.mongodb.org/mongo-driver v1.17.10 // indirect
+	golang.org/x/arch v0.31.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 )
