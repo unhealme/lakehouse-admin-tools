@@ -1,6 +1,7 @@
 package obs
 
 import (
+	"io"
 	"iter"
 	"slices"
 	"strings"
@@ -244,6 +245,15 @@ func (c ObsClient) Walk0(logger *pterm.Logger, path ObsPath, dirOnly bool) iter.
 	return c.iterPaths(logger, i, -1, dirOnly)
 }
 
+func (c ObsClient) ReadFile(path ObsPath) (io.ReadCloser, error) {
+	i := obs.GetObjectInput{Bucket: path.Bucket, Key: path.Key}
+	resp, err := c.GetObject(&i)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Body, nil
+}
+
 func (c ObsClient) RenameObject(logger *pterm.Logger, path ObsPath, keyAfter string) {
 	fullKey := path.URI()
 	argsOk := logger.Args("before", fullKey, "after", path.WithKey(keyAfter).URI())
@@ -284,6 +294,14 @@ func (c ObsClient) SetStorageClass(logger *pterm.Logger, path ObsPath, class obs
 	} else {
 		logger.Debug("set storage class for object success.", logger.Args("path", path.URI(), "class", class))
 	}
+}
+
+func (c ObsClient) WriteFile(path ObsPath, data io.Reader) error {
+	i := obs.PutObjectInput{Bucket: path.Bucket, Key: path.Key, Body: data}
+	if _, err := c.PutObject(&i); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewClient(endpoint string, ak, sk string, token string) (*ObsClient, error) {
