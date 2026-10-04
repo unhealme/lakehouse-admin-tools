@@ -56,7 +56,7 @@ func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) er
 	_, err := c.Http.R().
 		SetBody(killAppBody).
 		SetHeader("Content-Type", "application/json").
-		Get(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id))
+		Put(fmt.Sprintf("/ws/v1/cluster/apps/%s/state", app.Id))
 	return err
 }
 

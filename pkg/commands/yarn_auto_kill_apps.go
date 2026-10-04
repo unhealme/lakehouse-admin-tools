@@ -10,7 +10,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-const YarnAutoKillAppsVersion = "2026.07.08-0"
+const YarnAutoKillAppsVersion = "2026.10.05-0"
 
 func YarnAutoKillApps(logger *pterm.Logger, args *arguments.YarnAutoKillAppsArgs) {
 	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
