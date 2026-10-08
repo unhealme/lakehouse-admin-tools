@@ -123,3 +123,14 @@ func (p ObsPathAnalyzed) SerTable() []string {
 func SameObsKey(x, y string) bool {
 	return strings.TrimSuffix(x, "/") == strings.TrimSuffix(y, "/")
 }
+
+type ObsPathChunked struct {
+	ObsPath
+	Dirs      []ObsPath
+	Files     []ObsPathContent
+	ExtraDirs int
+}
+
+func (p ObsPathChunked) Count() int {
+	return len(p.Dirs) + len(p.Files) + p.ExtraDirs
+}

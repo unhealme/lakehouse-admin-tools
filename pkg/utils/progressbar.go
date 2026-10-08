@@ -1,30 +1,31 @@
 package utils
 
-import (
-	"context"
-	"os"
-	"os/signal"
-	"syscall"
+import "github.com/pterm/pterm"
 
-	"github.com/pterm/pterm"
-)
+type ProgressBar struct {
+	*pterm.ProgressbarPrinter
 
-func NewProgressBar(ctx context.Context) *pterm.ProgressbarPrinter {
-	prog := pterm.DefaultProgressbar
-	go progressBarStopper(ctx, &prog)
-	return &prog
+	stopId uint32
 }
 
-func progressBarStopper(ctx context.Context, prog *pterm.ProgressbarPrinter) {
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	select {
-	case status := <-sig:
-		prog.Stop()
-		os.Exit(int(status.(syscall.Signal)))
-	case <-ctx.Done():
-		prog.Stop()
-		signal.Stop(sig)
-		return
+func (p ProgressBar) Start() (*ProgressBar, error) {
+	newStart := !p.IsActive
+	pp, err := p.ProgressbarPrinter.Start()
+	if err == nil && newStart {
+		p.stopId = AtInterrupt(func() { p.Stop() })
 	}
+	p.ProgressbarPrinter = pp
+	return &p, err
+}
+
+func (p *ProgressBar) Stop() (*ProgressBar, error) {
+	if p.IsActive {
+		UnInterrupt(p.stopId)
+	}
+	_, err := p.ProgressbarPrinter.Stop()
+	return p, err
+}
+
+func NewProgressBar(p *pterm.ProgressbarPrinter) ProgressBar {
+	return ProgressBar{ProgressbarPrinter: p}
 }

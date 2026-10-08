@@ -1,11 +1,10 @@
 package obs
 
 import (
+	"fmt"
 	"io"
 	"iter"
-	"slices"
 	"strings"
-	"sync"
 
 	"github.com/gobwas/glob"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
@@ -15,13 +14,16 @@ import (
 
 type ObsClient struct{ *obs.ObsClient }
 
-func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
+func (c ObsClient) iterPaths(logger *pterm.Logger, i obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
 	return func(yield func(ObsPathContent) bool) {
-		obsPathStr := "obs://" + input.Bucket + "/" + input.Prefix
+		path := "obs://" + i.Bucket + "/" + i.Prefix
 		for p := 1; true; p++ {
-			logArgs := logger.Args("depth", depth, "path", obsPathStr, "page", p)
+			logArgs := logger.Args("path", path, "page", p)
+			if depth > 0 {
+				logArgs = append(logger.Args("depth", depth), logArgs...)
+			}
 			logger.Debug("listing obs paths.", logArgs)
-			r, err := c.ListObjects(&input)
+			r, err := c.ListObjects(&i)
 			if err != nil {
 				// obsError, ok := err.(obs.ObsError)
 				logger.Error("unable to list obs paths.", logArgs, logger.Args("error", err))
@@ -29,13 +31,13 @@ func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, d
 			}
 			logger.Debug("obs paths fetched.", logArgs, logger.Args("contents", len(r.Contents), "common-prefix", len(r.CommonPrefixes)))
 			for _, v := range r.CommonPrefixes {
-				if !yield(NewObsPathContent(depth, input.Bucket, v, nil)) {
+				if !yield(NewObsPathContent(depth, i.Bucket, v, nil)) {
 					return
 				}
 			}
 			if !dirOnly {
 				for _, v := range r.Contents {
-					if !yield(NewObsPathContent(depth, input.Bucket, v.Key, &v)) {
+					if !yield(NewObsPathContent(depth, i.Bucket, v.Key, &v)) {
 						return
 					}
 				}
@@ -43,81 +45,83 @@ func (c ObsClient) iterPaths(logger *pterm.Logger, input obs.ListObjectsInput, d
 			if !r.IsTruncated {
 				break
 			}
-			input.Marker = r.NextMarker
+			i.Marker = r.NextMarker
 		}
 	}
 }
 
-func (c ObsClient) Analyze(logger *pterm.Logger, slot *utils.Slot, minChunks int, path ObsPath) ObsPathAnalyzed {
-	var (
-		once sync.Once
-
-		dirs, files, extraDirs = c.SplitChunk(logger, minChunks, path)
-		stats                  = ObsPathAnalyzed{
-			Bucket:   path.Bucket,
-			Key:      path.Key,
-			DirCount: int64(extraDirs),
+func (c ObsClient) Analyze(logger *pterm.Logger, path ObsPath) ObsPathAnalyzed {
+	stats := ObsPathAnalyzed{ObsPath: path}
+	for op := range c.Walk0(logger, path, false) {
+		suffix := strings.TrimPrefix(op.Key, strings.TrimSuffix(path.Key, "/"))
+		if suffix != "" && !strings.HasPrefix(suffix, "/") {
+			// skip prefix only match
+			// prefix => prefix-path
+			continue
 		}
-	)
-	logger.Debug("path chunked.", logger.Args(
-		"countDirs", len(dirs),
-		"countFiles", len(files),
-		"extraDirs", extraDirs,
-	))
-	for _, f := range files {
-		stats.FileCount++
-		stats.Size += f.Content.Size
-		if f.Content.LastModified.UnixMilli() > stats.LastModified {
-			stats.LastModified = f.Content.LastModified.UnixMilli()
-		}
-	}
 
-	if slot == nil {
-		slot = utils.NewSlot(0)
-	}
-
-	slot.Unblock()
-	for paths := range slot.MapValue(func(p ObsPath) []ObsPathContent {
-		return slices.Collect(c.Walk0(logger, p, false))
-	}, dirs, false) {
-		for _, op := range paths {
-			suffix := strings.TrimPrefix(op.Key, strings.TrimSuffix(path.Key, "/"))
-			if suffix != "" && !strings.HasPrefix(suffix, "/") {
-				continue
-			}
-
-			once.Do(func() {
-				if suffix != "" && !strings.HasSuffix(stats.Key, "/") {
-					stats.Key += "/"
-				}
-				stats.Exists = true
-			})
-
-			if op.IsDir() {
-				if suffix != "/" {
-					stats.DirCount++
-				}
-			} else {
-				stats.FileCount++
-				stats.Size += op.Content.Size
-				if op.Content.LastModified.UnixMilli() > stats.LastModified {
-					stats.LastModified = op.Content.LastModified.UnixMilli()
-				}
-				switch string(op.Content.StorageClass) {
-				case "STANDARD":
-					stats.Fsc.Hot++
-				case "WARM":
-					stats.Fsc.Warm++
-				case "COLD", "DEEP_ARCHIVE", "GLACIER":
-					stats.Fsc.Cold++
-				}
+		switch {
+		case suffix == "/":
+			stats.Exists = true
+		case op.IsDir():
+			stats.DirCount++
+		default:
+			stats.FileCount++
+			stats.Size += op.Content.Size
+			stats.LastModified = max(
+				stats.LastModified, op.Content.LastModified.UnixMilli(),
+			)
+			switch string(op.Content.StorageClass) {
+			case "STANDARD":
+				stats.Fsc.Hot++
+			case "WARM":
+				stats.Fsc.Warm++
+			case "COLD", "DEEP_ARCHIVE", "GLACIER":
+				stats.Fsc.Cold++
 			}
 		}
 	}
-	if stats.DirCount > 0 || stats.FileCount > 0 {
+	if stats.FileCount > 0 || stats.DirCount > 0 {
 		stats.Exists = true
 	}
-	slot.Block()
+	return stats
+}
+
+func (c ObsClient) AnalyzeChunk(logger *pterm.Logger, slot *utils.Slot, chunk ObsPathChunked) ObsPathAnalyzed {
+	stats := ObsPathAnalyzed{
+		ObsPath:  chunk.ObsPath,
+		DirCount: int64(len(chunk.Dirs) + chunk.ExtraDirs - 1),
+		Exists:   chunk.Count() > 0,
+	}
+	for _, f := range chunk.Files {
+		stats.FileCount++
+		stats.Size += f.Content.Size
+		stats.LastModified = max(
+			stats.LastModified, f.Content.LastModified.UnixMilli(),
+		)
+		switch string(f.Content.StorageClass) {
+		case "STANDARD":
+			stats.Fsc.Hot++
+		case "WARM":
+			stats.Fsc.Warm++
+		case "COLD", "DEEP_ARCHIVE", "GLACIER":
+			stats.Fsc.Cold++
+		}
+	}
+
+	for ds := range slot.MapValue(func(path ObsPath) ObsPathAnalyzed {
+		return c.Analyze(logger, path)
+	}, chunk.Dirs, false) {
+		stats.DirCount += ds.DirCount
+		stats.FileCount += ds.FileCount
+		stats.Size += ds.Size
+
+		stats.LastModified = max(stats.LastModified, ds.LastModified)
+
+		stats.Fsc.Hot += ds.Fsc.Hot
+		stats.Fsc.Warm += ds.Fsc.Warm
+		stats.Fsc.Cold += ds.Fsc.Cold
+	}
 	return stats
 }
 
@@ -131,9 +135,19 @@ func (c ObsClient) Glob(logger *pterm.Logger, path ObsPath) (matchKeys []string)
 			if len(matchKeys) < 1 {
 				matchKeys = append(matchKeys, key.segment)
 			} else {
-				for i, k := range matchKeys {
-					matchKeys[i] = k + key.segment
+				var nextKeys []string
+				for _, k := range matchKeys {
+					for op := range c.Walk(logger, path.WithKey(k), 1, false) {
+						if SameObsKey(strings.TrimPrefix(op.Key, k), key.segment) {
+							logger.Debug(fmt.Sprintf("%s match with %s", op.Key, key.segment))
+							nextKeys = append(nextKeys, op.Key)
+						}
+					}
 				}
+				if len(nextKeys) < 1 {
+					return nil
+				}
+				matchKeys = nextKeys
 			}
 		} else {
 			if len(matchKeys) < 1 {
@@ -145,104 +159,20 @@ func (c ObsClient) Glob(logger *pterm.Logger, path ObsPath) (matchKeys []string)
 				if !strings.HasSuffix(k, "/") {
 					k += "/"
 				}
-				for op := range c.Walk(logger, NewObsPath(path.Bucket, k), 1, false) {
-					if name := strings.TrimPrefix(op.Key, k); name != "" && g.Match(name) {
+				for op := range c.Walk(logger, path.WithKey(k), 1, false) {
+					name := strings.TrimPrefix(op.Key, k)
+					if name != "" && g.Match(name) {
 						nextKeys = append(nextKeys, op.Key)
 					}
 				}
+			}
+			if len(nextKeys) < 1 {
+				return nil
 			}
 			matchKeys = nextKeys
 		}
 	}
 	return
-}
-
-func (c ObsClient) SplitChunk(logger *pterm.Logger, minChunks int, path ObsPath) (
-	dirs []ObsPath, files []ObsPathContent, extraDirs int,
-) {
-	if minChunks <= 1 {
-		return []ObsPath{path}, nil, 0
-	}
-
-	i := obs.ListObjectsInput{
-		Bucket:       path.Bucket,
-		MaxKeys:      1000,
-		EncodingType: "url",
-		Delimiter:    "/",
-	}
-
-	nextDepth := []string{path.Key}
-	for depth := 1; len(nextDepth) > 0; depth++ {
-		paths := nextDepth[:]
-		nextDepth = nil
-		for n, p := range paths {
-			i.Prefix = p
-			for op := range c.iterPaths(logger, i, depth, false) {
-				if op.IsDir() && !SameObsKey(p, op.Key) {
-					nextDepth = append(nextDepth, op.Key)
-				}
-				if !op.IsDir() {
-					files = append(files, op)
-				}
-			}
-			if len(dirs)+len(files)+len(nextDepth)+len(paths)-n+1 >= minChunks {
-				for _, dir := range nextDepth {
-					dirs = append(dirs, NewObsPath(path.Bucket, dir))
-				}
-				nextDepth = nil
-				paths = paths[n+1:]
-				extraDirs--
-				break
-			}
-		}
-		if len(nextDepth) < 1 {
-			for _, dir := range paths {
-				dirs = append(dirs, NewObsPath(path.Bucket, dir))
-			}
-		}
-		extraDirs++
-	}
-	return
-}
-
-func (c ObsClient) Walk(logger *pterm.Logger, path ObsPath, maxDepth int, dirOnly bool) iter.Seq[ObsPathContent] {
-	i := obs.ListObjectsInput{
-		Bucket:       path.Bucket,
-		MaxKeys:      1000,
-		EncodingType: "url",
-		Delimiter:    "/",
-	}
-
-	return func(yield func(ObsPathContent) bool) {
-		nextDepth := []string{path.Key}
-		for depth := 1; (depth <= maxDepth || maxDepth < 0) && len(nextDepth) > 0; depth++ {
-			dirs := nextDepth[:]
-			nextDepth = nil
-			for _, p := range dirs {
-				i.Prefix = p
-				for op := range c.iterPaths(logger, i, depth, dirOnly) {
-					if depth == 1 || !SameObsKey(p, op.Key) {
-						if !yield(op) {
-							return
-						}
-					}
-					if op.IsDir() && !SameObsKey(p, op.Key) {
-						nextDepth = append(nextDepth, op.Key)
-					}
-				}
-			}
-		}
-	}
-}
-
-func (c ObsClient) Walk0(logger *pterm.Logger, path ObsPath, dirOnly bool) iter.Seq[ObsPathContent] {
-	i := obs.ListObjectsInput{
-		Bucket:       path.Bucket,
-		MaxKeys:      1000,
-		EncodingType: "url",
-		Prefix:       path.Key,
-	}
-	return c.iterPaths(logger, i, -1, dirOnly)
 }
 
 func (c ObsClient) ReadFile(path ObsPath) (io.ReadCloser, error) {
@@ -294,6 +224,89 @@ func (c ObsClient) SetStorageClass(logger *pterm.Logger, path ObsPath, class obs
 	} else {
 		logger.Debug("set storage class for object success.", logger.Args("path", path.URI(), "class", class))
 	}
+}
+
+func (c ObsClient) SplitChunk(logger *pterm.Logger, minChunks int, path ObsPath) (chunk ObsPathChunked) {
+	chunk = ObsPathChunked{ObsPath: path}
+	i := obs.ListObjectsInput{
+		Bucket:       path.Bucket,
+		MaxKeys:      1000,
+		EncodingType: "url",
+		Delimiter:    "/",
+	}
+
+	var paths []string
+	nextDepth := []string{path.Key}
+	for depth := 1; len(nextDepth) > 0; depth++ {
+		paths, nextDepth = nextDepth, nil
+		for n, p := range paths {
+			i.Prefix = p
+			for op := range c.iterPaths(logger, i, depth, false) {
+				suffix := strings.TrimPrefix(op.Key, strings.TrimSuffix(p, "/"))
+				if suffix != "" && !strings.HasPrefix(suffix, "/") {
+					// skip prefix only match
+					// prefix => prefix-path
+					continue
+				}
+
+				switch {
+				case op.Key == p:
+					chunk.ExtraDirs++
+				case op.IsDir():
+					nextDepth = append(nextDepth, op.Key)
+				default:
+					chunk.Files = append(chunk.Files, op)
+				}
+			}
+			if len(chunk.Dirs)+len(nextDepth)+len(paths[n+1:]) >= minChunks { // chunk is full
+				for _, dir := range append(nextDepth, paths[n+1:]...) {
+					chunk.Dirs = append(chunk.Dirs, path.WithKey(dir))
+				}
+				return
+			}
+		}
+	}
+	return
+}
+
+func (c ObsClient) Walk(logger *pterm.Logger, path ObsPath, maxDepth int, dirOnly bool) iter.Seq[ObsPathContent] {
+	i := obs.ListObjectsInput{
+		Bucket:       path.Bucket,
+		MaxKeys:      1000,
+		EncodingType: "url",
+		Delimiter:    "/",
+	}
+
+	return func(yield func(ObsPathContent) bool) {
+		var dirs, next []string
+		next = []string{path.Key}
+		for depth := 1; (depth <= maxDepth || maxDepth < 0) && len(next) > 0; depth++ {
+			dirs, next = next, nil
+			for _, p := range dirs {
+				i.Prefix = p
+				for op := range c.iterPaths(logger, i, depth, dirOnly) {
+					if depth == 1 || !SameObsKey(p, op.Key) {
+						if !yield(op) {
+							return
+						}
+					}
+					if op.IsDir() && !SameObsKey(p, op.Key) {
+						next = append(next, op.Key)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (c ObsClient) Walk0(logger *pterm.Logger, path ObsPath, dirOnly bool) iter.Seq[ObsPathContent] {
+	i := obs.ListObjectsInput{
+		Bucket:       path.Bucket,
+		MaxKeys:      1000,
+		EncodingType: "url",
+		Prefix:       path.Key,
+	}
+	return c.iterPaths(logger, i, -1, dirOnly)
 }
 
 func (c ObsClient) WriteFile(path ObsPath, data io.Reader) error {

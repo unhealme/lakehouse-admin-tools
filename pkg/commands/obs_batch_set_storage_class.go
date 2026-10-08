@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"iter"
 	rand "math/rand/v2"
 	"os"
@@ -140,9 +139,8 @@ func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, base
 				total += 1
 			}
 		}
-		ctx, done := context.WithCancel(context.Background())
-		prog, _ := utils.NewProgressBar(ctx).WithTitle("Setting Storage Class").WithTotal(total).Start()
-		defer done()
+		prog, _ := utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Setting Storage Class").WithTotal(total)).Start()
+		defer prog.Stop()
 		slot.Map(
 			func(key string) {
 				obsClient.SetStorageClass(logger, basePath.WithKey(key), storageClass)

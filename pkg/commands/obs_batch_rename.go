@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	rand "math/rand/v2"
 	"path"
 	"strings"
@@ -40,11 +39,10 @@ func ObsBatchRename(logger *pterm.Logger, args *arguments.ObsBatchRenameArgs) {
 
 	logger.Info("all obs paths fetched.", logger.Args("path to rename", total))
 	if total > 0 {
-		var prog *pterm.ProgressbarPrinter
+		var prog *utils.ProgressBar
 		if !args.NoProg {
-			ctx, done := context.WithCancel(context.Background())
-			prog, _ = utils.NewProgressBar(ctx).WithTitle("Renaming paths").WithTotal(total).Start()
-			defer done()
+			prog, _ = utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Renaming paths").WithTotal(total)).Start()
+			defer prog.Stop()
 		}
 		utils.NewSlot(max(args.Concurrency, 1)).Map(
 			func(path pathToRename) {

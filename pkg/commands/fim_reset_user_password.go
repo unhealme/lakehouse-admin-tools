@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"context"
-
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
@@ -18,11 +16,10 @@ func FimResetUserPassword(logger *pterm.Logger, args *arguments.FimResetUserPass
 		logger.Fatal("unable to login to FIM.", logger.Args("error", err))
 	}
 
-	var prog *pterm.ProgressbarPrinter
+	var prog *utils.ProgressBar
 	if !args.NoProg {
-		ctx, done := context.WithCancel(context.Background())
-		prog, _ = utils.NewProgressBar(ctx).WithTitle("Resetting password").WithTotal(len(args.Users)).Start()
-		defer done()
+		prog, _ = utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Resetting password").WithTotal(len(args.Users))).Start()
+		defer prog.Stop()
 	}
 	for _, user := range args.Users {
 		if err := args.FimClient.ResetUserPassword(user, args.DefaultPass); err != nil {

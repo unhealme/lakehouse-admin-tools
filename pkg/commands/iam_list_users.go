@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"context"
 	"encoding/csv"
 	"os"
 	"slices"
@@ -24,11 +23,7 @@ func IamListUsers(logger *pterm.Logger, args *arguments.IamListUsersArgs) {
 	outFile := os.Stdout
 	if args.OutputFile != "" {
 		var err error
-		if outFile, err = os.OpenFile(
-			args.OutputFile,
-			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-			0o644,
-		); err != nil {
+		if outFile, err = os.Create(args.OutputFile); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
 		}
 		defer outFile.Close()
@@ -57,11 +52,10 @@ func IamListUsers(logger *pterm.Logger, args *arguments.IamListUsersArgs) {
 		}
 	}
 
-	var prog *pterm.ProgressbarPrinter
+	var prog *utils.ProgressBar
 	if !args.NoProg && args.OutputFile != "" {
-		ctx, done := context.WithCancel(context.Background())
-		prog, _ = utils.NewProgressBar(ctx).WithTitle("Listing users").WithTotal(len(users)).Start()
-		defer done()
+		prog, _ = utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Listing users").WithTotal(len(users))).Start()
+		defer prog.Stop()
 	}
 
 	serializeIamUser := func(user *model.KeystoneListUsersResult) []string {

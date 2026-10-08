@@ -52,9 +52,7 @@ var printCsvHeader = sync.OnceFunc(func() {
 func OpenCsvWriter(file string, headers []string) (err error) {
 	if file == "" {
 		csvOutputFile = os.Stdout
-	} else if csvOutputFile, err = os.OpenFile(file,
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-		0o644); err != nil {
+	} else if csvOutputFile, err = os.Create(file); err != nil {
 		return
 	}
 	csvOutputWriter = csv.NewWriter(csvOutputFile)
@@ -65,9 +63,7 @@ func OpenCsvWriter(file string, headers []string) (err error) {
 func OpenJsonWriter(file string) (err error) {
 	if file == "" {
 		jsonOutputFile = os.Stdout
-	} else if jsonOutputFile, err = os.OpenFile(file,
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-		0o644); err != nil {
+	} else if jsonOutputFile, err = os.Create(file); err != nil {
 		return
 	}
 	jsonOutputWriter = bufio.NewWriter(jsonOutputFile)
@@ -77,9 +73,7 @@ func OpenJsonWriter(file string) (err error) {
 func OpenTableWriter(file string, headers []string) (err error) {
 	if file == "" {
 		tableOutputFile = os.Stdout
-	} else if tableOutputFile, err = os.OpenFile(file,
-		os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-		0o644); err != nil {
+	} else if tableOutputFile, err = os.Create(file); err != nil {
 		return
 	}
 	tableOutputWriter = pterm.DefaultTable.WithHeaderRowSeparator("─").WithWriter(tableOutputFile)

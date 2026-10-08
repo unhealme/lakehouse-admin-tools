@@ -9,8 +9,9 @@ import (
 
 type UamDescribeUserArgs struct {
 	Users      []string                   `arg:"positional" placeholder:"USER"`
-	InputFile  string                     `arg:"-i,--" help:"read user input from FILE" placeholder:"FILE"`
+	InputFile  string                     `arg:"-i,--" help:"read USER input from FILE" placeholder:"FILE"`
 	OutputFile string                     `arg:"-o,--" help:"write result to FILE instead of stdout" placeholder:"FILE"`
+	InputSep   string                     `arg:"-d,--delimiter" help:"delimiter for input USER in FILE. (default to newline)"`
 	Format     UamDescribeUserPrintFormat `arg:"-f,--format" default:"default" help:"output format" placeholder:"{default,csv}"`
 	NoHeader   bool                       `arg:"-,--no-header" help:"do not print header for csv output format"`
 	Unsafe     bool                       `arg:"-,--unsafe" help:"do not escape USER"`

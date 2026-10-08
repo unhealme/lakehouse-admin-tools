@@ -18,11 +18,7 @@ func IamListGroups(logger *pterm.Logger, args *arguments.IamListGroupsArgs) {
 	outFile := os.Stdout
 	if args.OutputFile != "" {
 		var err error
-		if outFile, err = os.OpenFile(
-			args.OutputFile,
-			os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-			0o644,
-		); err != nil {
+		if outFile, err = os.Create(args.OutputFile); err != nil {
 			logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
 		}
 		defer outFile.Close()

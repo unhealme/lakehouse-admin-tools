@@ -10,9 +10,10 @@ import (
 type HiveBackupTableArgs struct {
 	Tables      []string                 `arg:"positional" placeholder:"[DB.]TABLE"`
 	Fixed       bool                     `arg:"-F,--fixed" help:"TABLE is not pattern"`
+	InputSep    string                   `arg:"-d,--delimiter" help:"delimiter for input TABLE in FILE. (default to newline)"`
 	Format      HiveBackupTableOutputFmt `arg:"-f,--format" default:"csv" help:"output format" placeholder:"{csv,json}"`
 	Concurrency int                      `arg:"-j,--" default:"2" help:"max job concurrency" placeholder:"NUM"`
-	InputFile   string                   `arg:"-i,--" help:"read table input from FILE" placeholder:"FILE"`
+	InputFile   string                   `arg:"-i,--" help:"read TABLE input from FILE" placeholder:"FILE"`
 	OutputFile  string                   `arg:"-o,--" help:"write result to FILE instead of stdout" placeholder:"FILE"`
 	NoHeader    bool                     `arg:"-,--no-header" help:"do not print header for csv output format"`
 	NoProg      bool                     `arg:"-,--no-progress" help:"disable progress bar"`

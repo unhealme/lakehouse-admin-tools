@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"context"
-
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/yarn"
@@ -31,11 +29,10 @@ func YarnAutoKillApps(logger *pterm.Logger, args *arguments.YarnAutoKillAppsArgs
 
 	if total > 0 {
 		logger.Info("yarn applications filtered.", logger.Args("app to kill", total))
-		var prog *pterm.ProgressbarPrinter
+		var prog *utils.ProgressBar
 		if !args.NoProg {
-			ctx, done := context.WithCancel(context.Background())
-			prog, _ = utils.NewProgressBar(ctx).WithTitle("Killing yarn applications").WithTotal(total).Start()
-			defer done()
+			prog, _ = utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Killing yarn applications").WithTotal(total)).Start()
+			defer prog.Stop()
 		}
 		for _, app := range appToKill {
 			var err error

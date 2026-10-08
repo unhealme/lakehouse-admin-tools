@@ -1,8 +1,6 @@
 package commands
 
 import (
-	"bufio"
-	"context"
 	json "encoding/json/v2"
 	"iter"
 	"os"
@@ -14,11 +12,39 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-const HiveBackupTableVersion = "2026.09.05-0"
+const HiveBackupTableVersion = "2026.10.09-0"
 
 func HiveBackupTable(logger *pterm.Logger, args *arguments.HiveBackupTableArgs) {
 	logger.Debug("using backup table args.", logger.Args(internal.ToArgs(*args)...))
 	c := args.HiveServerClient.SetMaxConnections(args.Concurrency)
+
+	tableInputs := args.Tables
+	if args.InputFile != "" {
+		r := os.Stdin
+		if args.InputFile != "-" {
+			var err error
+			r, err = os.Open(args.InputFile)
+			if err != nil {
+				logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile))
+			}
+		}
+		re := make(chan error, 1)
+		for i := range utils.IterLinesSeq(r, args.InputSep, re) {
+			if t := strings.TrimSpace(i); t != "" {
+				tableInputs = append(tableInputs, strings.TrimSpace(i))
+			}
+		}
+		if err := <-re; err != nil {
+			logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile, "error", err))
+		}
+		if r != os.Stdin {
+			r.Close()
+		}
+	}
+	if len(tableInputs) < 1 {
+		logger.Fatal("no table input is specified.")
+	}
+	tableInputs = utils.SliceDedup(tableInputs)
 
 	switch args.Format {
 	case arguments.HiveBackupTableOutputCsv:
@@ -35,28 +61,6 @@ func HiveBackupTable(logger *pterm.Logger, args *arguments.HiveBackupTableArgs) 
 		}
 	}
 	defer utils.CloseOutput()
-
-	tableInputs := args.Tables
-	if args.InputFile != "" {
-		file, err := os.Open(args.InputFile)
-		if err != nil {
-			logger.Fatal("unable to read input file.", logger.Args("name", args.InputFile, "error", err))
-		}
-		scanner := bufio.NewScanner(file)
-		line := 1
-		for scanner.Scan() {
-			tableInputs = append(tableInputs, strings.TrimSpace(scanner.Text()))
-			line++
-		}
-		file.Close()
-		if scanner.Err() != nil {
-			logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile, "line", line))
-		}
-	}
-	if len(tableInputs) < 1 {
-		logger.Fatal("no table input is specified.")
-	}
-	tableInputs = utils.SliceDedup(tableInputs)
 
 	var tables []backupHiveTableResult
 	slot := utils.NewSlot(max(args.Concurrency, 1))
@@ -106,11 +110,10 @@ func HiveBackupTable(logger *pterm.Logger, args *arguments.HiveBackupTableArgs) 
 		tables = utils.SliceDedup(tables)
 	}
 
-	var prog *pterm.ProgressbarPrinter
+	var prog *utils.ProgressBar
 	if !args.NoProg && args.OutputFile != "" {
-		ctx, done := context.WithCancel(context.Background())
-		prog, _ = utils.NewProgressBar(ctx).WithTitle("Backup tables").WithTotal(len(tables)).Start()
-		defer done()
+		prog, _ = utils.NewProgressBar(pterm.DefaultProgressbar.WithTitle("Backup tables").WithTotal(len(tables))).Start()
+		defer prog.Stop()
 	}
 	fetchResult := func(t backupHiveTableResult) *backupHiveTableResult {
 		var err error

@@ -11,35 +11,41 @@ type globSegment struct {
 	isGlob  bool
 }
 
-func splitGlobSegments(path string) (splitKeys []globSegment) {
-	var keySegment []string
-	for segment := range strings.SplitSeq(path, "/") {
-		if !strings.ContainsAny(segment, GlobToken) {
-			keySegment = append(keySegment, segment)
-		} else {
-			if len(keySegment) > 0 {
+func splitGlobSegments(path string) (segments []globSegment) {
+	var key []string
+	for s := range strings.SplitSeq(path, "/") {
+		if strings.ContainsAny(s, GlobToken) {
+			if len(key) > 0 {
 				gs := globSegment{isGlob: false}
-				if len(splitKeys) < 1 && strings.HasPrefix(path, "/") {
-					gs.segment = "/" + strings.Join(keySegment, "/")
+				if len(segments) < 1 && strings.HasPrefix(path, "/") {
+					gs.segment = "/" + strings.Join(key, "/")
 				} else {
-					gs.segment = strings.Join(keySegment, "/")
+					gs.segment = strings.Join(key, "/")
 				}
-				splitKeys = appendGlobSegment(splitKeys, gs)
-				keySegment = nil
+				segments = appendGlobSegment(segments, gs)
+				key = nil
 			}
-			splitKeys = appendGlobSegment(splitKeys, globSegment{segment, true})
+			segments = appendGlobSegment(segments, globSegment{s, true})
+		} else if s != "" {
+			key = append(key, s)
 		}
 	}
-	if len(keySegment) > 0 {
-		splitKeys = appendGlobSegment(splitKeys, globSegment{strings.Join(keySegment, "/"), false})
+	if len(key) > 0 {
+		s := strings.Join(key, "/")
+		segments = appendGlobSegment(segments, globSegment{s, false})
+	}
+	if strings.HasSuffix(path, "/") {
+		segments[len(segments)-1].segment += "/"
 	}
 	return
 }
 
 func appendGlobSegment(keys []globSegment, segment globSegment) []globSegment {
 	if len(keys) > 0 {
-		keys[len(keys)-1].segment += "/"
+		k := &keys[len(keys)-1]
+		if !strings.HasSuffix(k.segment, "/") {
+			k.segment += "/"
+		}
 	}
-	keys = append(keys, segment)
-	return keys
+	return append(keys, segment)
 }

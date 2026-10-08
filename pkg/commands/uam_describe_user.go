@@ -12,26 +12,32 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-const UamDescribeUserVersion = "2026.08.19-0"
+const UamDescribeUserVersion = "2026.10.09-0"
 
 func UamDescribeUser(logger *pterm.Logger, args *arguments.UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 
 	userInputs := args.Users
 	if args.InputFile != "" {
-		file, err := os.Open(args.InputFile)
-		if err != nil {
-			logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile))
+		r := os.Stdin
+		if args.InputFile != "-" {
+			var err error
+			r, err = os.Open(args.InputFile)
+			if err != nil {
+				logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile))
+			}
 		}
-		scanner := bufio.NewScanner(file)
-		line := 1
-		for scanner.Scan() {
-			userInputs = append(userInputs, strings.TrimSpace(scanner.Text()))
-			line++
+		re := make(chan error, 1)
+		for i := range utils.IterLinesSeq(r, args.InputSep, re) {
+			if t := strings.TrimSpace(i); t != "" {
+				userInputs = append(userInputs, strings.TrimSpace(i))
+			}
 		}
-		file.Close()
-		if scanner.Err() != nil {
-			logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile, "line", line))
+		if err := <-re; err != nil {
+			logger.Fatal("unable to read input file.", logger.Args("file", args.InputFile, "error", err))
+		}
+		if r != os.Stdin {
+			r.Close()
 		}
 	}
 	if len(userInputs) < 1 {
@@ -68,11 +74,7 @@ func UamDescribeUser(logger *pterm.Logger, args *arguments.UamDescribeUserArgs) 
 		outFile := os.Stdout
 		if args.OutputFile != "" {
 			var err error
-			if outFile, err = os.OpenFile(
-				args.OutputFile,
-				os.O_WRONLY|os.O_CREATE|os.O_TRUNC,
-				0o644,
-			); err != nil {
+			if outFile, err = os.Create(args.OutputFile); err != nil {
 				logger.Fatal("unable to open file to write.", logger.Args("file", args.OutputFile, "error", err))
 			}
 			defer outFile.Close()

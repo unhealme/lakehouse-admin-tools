@@ -4,63 +4,71 @@ import (
 	"context"
 	"iter"
 	"sync"
+
+	"go.uber.org/atomic"
 )
 
 type Slot struct {
 	Concurrency int
 
-	sem chan EmptyType
-	wg  sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	queue   chan func()
+	started atomic.Bool
+	wg      sync.WaitGroup
 }
 
-func (s *Slot) Close() {
-	s.Wait()
-	if s.sem != nil {
-		close(s.sem)
+func (s *Slot) Close(noWait ...bool) {
+	wait := len(noWait) > 0 && noWait[0]
+	if s.started.CompareAndSwap(true, false) {
+		close(s.queue)
+		if !wait {
+			s.cancel()
+		}
 	}
-}
-
-func (s *Slot) Block() {
-	if s.sem != nil {
-		s.sem <- Empty
+	if wait {
+		s.wg.Wait()
 	}
 }
 
 func (s *Slot) Do(f func()) {
-	if s.Concurrency > 0 {
-		s.sem <- Empty
-		s.wg.Go(func() { f(); <-s.sem })
+	if s.isConcurrent() {
+		s.startWorkers()
+		s.enqueue(f)
 	} else {
 		f()
 	}
 }
 
 func (s *Slot) DoNow(f func()) {
-	if s.Concurrency > 0 {
-		s.wg.Go(f)
-	} else {
-		f()
-	}
+	s.wg.Go(f)
 }
 
 func (s *Slot) Map[T any](f func(T), params []T) {
-	if s.Concurrency < 1 {
+	if !s.isConcurrent() || len(params) < 1 {
 		for _, x := range params {
 			f(x)
 		}
+		return
 	}
 
+	s.startWorkers()
+
 	var wg sync.WaitGroup
-	for _, x := range params {
-		s.sem <- Empty
-		wg.Go(func() { f(x); <-s.sem })
+	for _, p := range params {
+		wg.Add(1)
+		if !s.enqueue(func() { f(p); wg.Done() }) {
+			wg.Done()
+			break
+		}
 	}
 	wg.Wait()
 }
 
-func (s *Slot) MapValue[PT, RT any](f func(PT) RT, params []PT, fifo bool) iter.Seq[RT] {
-	if s.Concurrency < 1 {
-		return func(yield func(RT) bool) {
+func (s *Slot) MapValue[P, R any](f func(P) R, params []P, fifo bool) iter.Seq[R] {
+	if !s.isConcurrent() || len(params) < 1 {
+		return func(yield func(R) bool) {
 			for _, x := range params {
 				if !yield(f(x)) {
 					return
@@ -69,72 +77,128 @@ func (s *Slot) MapValue[PT, RT any](f func(PT) RT, params []PT, fifo bool) iter.
 		}
 	}
 
-	var (
-		result  chan RT
-		results []chan RT
-	)
+	s.startWorkers()
+
 	if fifo {
-		results = make([]chan RT, len(params))
-		for i := range results {
-			results[i] = make(chan RT, 1)
-		}
-	} else {
-		result = make(chan RT, s.Concurrency)
+		return s.mapFifo(f, params)
 	}
+	return s.mapValue(f, params)
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	go func() {
-		for i, x := range params {
-			select {
-			case <-ctx.Done():
-				return
-			case s.sem <- Empty:
-				r := result
-				if fifo {
-					r = results[i]
-				}
-				s.wg.Go(func() { r <- f(x); <-s.sem })
-			}
+func (s *Slot) enqueue(f func()) bool {
+	select {
+	case s.queue <- f:
+		return true
+	case <-s.ctx.Done():
+		return false
+	}
+}
+
+func (s *Slot) isConcurrent() bool {
+	return s.Concurrency > 1
+}
+
+func (s *Slot) mapFifo[P, R any](f func(P) R, params []P) iter.Seq[R] {
+	return func(yield func(R) bool) {
+		results := make([]chan R, len(params))
+		for i := range params {
+			results[i] = make(chan R, 1)
 		}
-	}()
-
-	if fifo {
-		return func(yield func(RT) bool) {
-			for _, res := range results {
-				if !yield(<-res) {
-					cancel()
+		s.wg.Go(func() {
+			for i, p := range params {
+				r := results[i]
+				w := func() {
+					defer close(r)
+					select {
+					case r <- f(p):
+					case <-s.ctx.Done():
+					}
+				}
+				if !s.enqueue(w) {
+					for _, r := range results[i:] {
+						close(r)
+					}
 					return
 				}
 			}
-		}
-	}
+		})
 
-	return func(yield func(RT) bool) {
-		for range params {
-			if !yield(<-result) {
-				cancel()
+		for _, r := range results {
+			select {
+			case v := <-r:
+				if !yield(v) {
+					return
+				}
+			case <-s.ctx.Done():
 				return
 			}
 		}
 	}
 }
 
-func (s *Slot) Unblock() {
-	if s.sem != nil {
-		<-s.sem
+func (s *Slot) mapValue[P, R any](f func(P) R, params []P) iter.Seq[R] {
+	return func(yield func(R) bool) {
+		result := make(chan R, s.Concurrency)
+		s.wg.Go(func() {
+			var wg sync.WaitGroup
+			for _, p := range params {
+				w := func() {
+					defer wg.Done()
+					select {
+					case result <- f(p):
+					case <-s.ctx.Done():
+					}
+				}
+				wg.Add(1)
+				if !s.enqueue(w) {
+					wg.Done()
+					break
+				}
+			}
+			wg.Wait()
+			close(result)
+		})
+
+		for {
+			select {
+			case v, ok := <-result:
+				if !ok {
+					return
+				}
+				if !yield(v) {
+					return
+				}
+			case <-s.ctx.Done():
+				return
+			}
+		}
 	}
 }
 
-func (s *Slot) Wait() {
-	if s.Concurrency > 0 {
-		s.wg.Wait()
+func (s *Slot) startWorkers() {
+	if s.started.CompareAndSwap(false, true) {
+		s.ctx, s.cancel = context.WithCancel(context.Background())
+		s.queue = make(chan func(), s.Concurrency*2)
+
+		for range s.Concurrency {
+			s.wg.Go(func() {
+				for {
+					select {
+					case f, ok := <-s.queue:
+						if !ok {
+							return
+						}
+						f()
+					case <-s.ctx.Done():
+						return
+					}
+				}
+			})
+		}
 	}
 }
 
 func NewSlot(concurrency int) *Slot {
 	s := Slot{Concurrency: concurrency}
-	if concurrency > 0 {
-		s.sem = make(chan EmptyType, concurrency)
-	}
 	return &s
 }
