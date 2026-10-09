@@ -110,7 +110,7 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 				stats.DirCount+stats.FileCount,
 				stats.DirCount, stats.FileCount,
 				stats.Fsc.Hot, stats.Fsc.Warm, stats.Fsc.Cold,
-				time.Unix(0, stats.LastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
+				time.Unix(0, stats.LastModified*1e6).Local().Format("2006-01-02 15:04:05.000"),
 			)
 
 			if args.Summarize {
@@ -144,7 +144,7 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 			totalDirs+totalFiles,
 			totalDirs, totalFiles,
 			filesHot, filesWarm, filesCold,
-			time.Unix(0, lastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
+			time.Unix(0, lastModified*1e6).Local().Format("2006-01-02 15:04:05.000"),
 		)
 	}
 }

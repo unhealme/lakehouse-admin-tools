@@ -85,16 +85,16 @@ var ObsPathAnalyzedHeader = []string{
 
 type ObsPathAnalyzed struct {
 	ObsPath
-	Exists       bool  `json:"exists"`
+	Exists       bool  `json:"-"`
 	DirCount     int64 `json:"dir_count"`
 	FileCount    int64 `json:"file_count"`
 	Size         int64 `json:"size"`
-	LastModified int64 `json:"last_modified"` // unix_milli
+	LastModified int64 `json:"last_modified"` // epoch millis
 	Fsc          struct {
 		Hot  int64 `json:"hot"`
 		Warm int64 `json:"warm"`
 		Cold int64 `json:"cold"`
-	} `json:"files_storage_class"`
+	} `json:"storage_classes"`
 }
 
 func (p ObsPathAnalyzed) SerCsv() []string {
@@ -107,7 +107,7 @@ func (p ObsPathAnalyzed) SerCsv() []string {
 		strconv.FormatInt(p.Fsc.Hot, 10),
 		strconv.FormatInt(p.Fsc.Warm, 10),
 		strconv.FormatInt(p.Fsc.Cold, 10),
-		time.Unix(0, p.LastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
+		time.Unix(0, p.LastModified*1e6).Local().Format("2006-01-02 15:04:05.000"),
 	}
 }
 
