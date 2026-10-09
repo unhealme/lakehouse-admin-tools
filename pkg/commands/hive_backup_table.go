@@ -19,9 +19,9 @@ func HiveBackupTable(logger *pterm.Logger, args *arguments.HiveBackupTableArgs) 
 	c := args.HiveServerClient.SetMaxConnections(args.Concurrency)
 
 	tableInputs := args.Tables
-	if args.InputFile != "" {
+	if args.InputFile != "" || len(args.Tables) < 1 {
 		r := os.Stdin
-		if args.InputFile != "-" {
+		if args.InputFile != "" && args.InputFile != "-" {
 			var err error
 			r, err = os.Open(args.InputFile)
 			if err != nil {

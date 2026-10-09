@@ -22,9 +22,9 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 	}
 
 	pathInputs := args.Paths
-	if args.InputFile != "" {
+	if args.InputFile != "" || len(args.Paths) < 1 {
 		r := os.Stdin
-		if args.InputFile != "-" {
+		if args.InputFile != "" && args.InputFile != "-" {
 			var err error
 			r, err = os.Open(args.InputFile)
 			if err != nil {

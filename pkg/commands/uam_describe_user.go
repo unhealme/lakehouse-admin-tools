@@ -18,9 +18,9 @@ func UamDescribeUser(logger *pterm.Logger, args *arguments.UamDescribeUserArgs) 
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 
 	userInputs := args.Users
-	if args.InputFile != "" {
+	if args.InputFile != "" || len(args.Users) < 1 {
 		r := os.Stdin
-		if args.InputFile != "-" {
+		if args.InputFile != "" && args.InputFile != "-" {
 			var err error
 			r, err = os.Open(args.InputFile)
 			if err != nil {
