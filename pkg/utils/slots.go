@@ -178,7 +178,7 @@ func (s *Slot) mapValue[P, R any](f func(P) R, params []P) iter.Seq[R] {
 func (s *Slot) startWorkers() {
 	if s.started.CompareAndSwap(false, true) {
 		s.ctx, s.cancel = context.WithCancel(context.Background())
-		s.queue = make(chan func(), s.Concurrency*2)
+		s.queue = make(chan func(), s.Concurrency)
 
 		for range s.Concurrency {
 			s.wg.Go(func() {

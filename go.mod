@@ -6,11 +6,11 @@ require (
 	github.com/alexflint/go-arg v1.6.1
 	github.com/beltran/gohive/v2 v2.1.0
 	github.com/bytedance/sonic v1.15.4
-	github.com/go-ldap/ldap/v3 v3.4.14
+	github.com/go-ldap/ldap/v3 v3.4.15
 	github.com/gobwas/glob v1.0.0
 	github.com/goccy/go-yaml v1.19.2
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.26.6+incompatible
-	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.217
+	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.218
 	github.com/imroc/req/v3 v3.61.0
 	github.com/itchyny/timefmt-go v0.1.9
 	github.com/jcmturner/gokrb5/v8 v8.4.4
@@ -18,7 +18,7 @@ require (
 	github.com/parquet-go/parquet-go v0.32.0
 	github.com/pterm/pterm v0.12.83
 	github.com/shirou/gopsutil/v4 v4.26.9
-	github.com/tidwall/gjson v1.19.0
+	github.com/tidwall/gjson v1.20.0
 	go.uber.org/atomic v1.12.0
 )
 
@@ -55,7 +55,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/lithammer/fuzzysearch v1.1.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
-	github.com/mattn/go-runewidth v0.0.30 // indirect
+	github.com/mattn/go-runewidth v0.0.31 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/parquet-go/bitpack v1.1.0 // indirect
@@ -78,7 +78,7 @@ require (
 	go.mongodb.org/mongo-driver v1.17.10 // indirect
 	golang.org/x/arch v0.31.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/net v0.59.0 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
