@@ -14,42 +14,6 @@ import (
 
 type ObsClient struct{ *obs.ObsClient }
 
-func (c ObsClient) iterPaths(i obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
-	return func(yield func(ObsPathContent) bool) {
-		path := "obs://" + i.Bucket + "/" + i.Prefix
-		for p := 1; true; p++ {
-			logArgs := logger.Args("path", path, "page", p)
-			if depth > 0 {
-				logArgs = append(logger.Args("depth", depth), logArgs...)
-			}
-			logger.Debug("listing obs paths.", logArgs)
-			r, err := c.ListObjects(&i)
-			if err != nil {
-				// obsError, ok := err.(obs.ObsError)
-				logger.Error("unable to list obs paths.", logArgs, logger.Args("error", err))
-				break
-			}
-			logger.Debug("obs paths fetched.", logArgs, logger.Args("contents", len(r.Contents), "common-prefix", len(r.CommonPrefixes)))
-			for _, v := range r.CommonPrefixes {
-				if !yield(NewObsPathContent(depth, i.Bucket, v, nil)) {
-					return
-				}
-			}
-			if !dirOnly {
-				for _, v := range r.Contents {
-					if !yield(NewObsPathContent(depth, i.Bucket, v.Key, &v)) {
-						return
-					}
-				}
-			}
-			if !r.IsTruncated {
-				break
-			}
-			i.Marker = r.NextMarker
-		}
-	}
-}
-
 func (c ObsClient) Analyze(path ObsPath) ObsPathAnalyzed {
 	stats := ObsPathAnalyzed{ObsPath: path}
 	for op := range c.Walk0(path, false) {
@@ -315,6 +279,42 @@ func (c ObsClient) WriteFile(path ObsPath, data io.Reader) error {
 		return err
 	}
 	return nil
+}
+
+func (c ObsClient) iterPaths(i obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
+	return func(yield func(ObsPathContent) bool) {
+		path := "obs://" + i.Bucket + "/" + i.Prefix
+		for p := 1; true; p++ {
+			logArgs := logger.Args("path", path, "page", p)
+			if depth > 0 {
+				logArgs = append(logger.Args("depth", depth), logArgs...)
+			}
+			logger.Debug("listing obs paths.", logArgs)
+			r, err := c.ListObjects(&i)
+			if err != nil {
+				// obsError, ok := err.(obs.ObsError)
+				logger.Error("unable to list obs paths.", logArgs, logger.Args("error", err))
+				break
+			}
+			logger.Debug("obs paths fetched.", logArgs, logger.Args("contents", len(r.Contents), "common-prefix", len(r.CommonPrefixes)))
+			for _, v := range r.CommonPrefixes {
+				if !yield(NewObsPathContent(depth, i.Bucket, v, nil)) {
+					return
+				}
+			}
+			if !dirOnly {
+				for _, v := range r.Contents {
+					if !yield(NewObsPathContent(depth, i.Bucket, v.Key, &v)) {
+						return
+					}
+				}
+			}
+			if !r.IsTruncated {
+				break
+			}
+			i.Marker = r.NextMarker
+		}
+	}
 }
 
 func NewClient(endpoint string, ak, sk string, token string) (*ObsClient, error) {

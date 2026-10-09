@@ -3,7 +3,6 @@ package commands
 import (
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -14,7 +13,7 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
-const ObsAnalyzeVersion = "2026.10.07-0"
+const ObsAnalyzeVersion = "2026.10.09-0"
 
 func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
@@ -44,6 +43,9 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 		if r != os.Stdin {
 			r.Close()
 		}
+	}
+	if len(pathInputs) < 1 {
+		return
 	}
 
 	if args.CsvOut != "" {
@@ -93,44 +95,12 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 		).Start()
 	}
 
-	var (
-		filesHot, filesWarm, filesCold,
+	var filesHot, filesWarm, filesCold,
 		lastModified,
 		totalSize, totalDirs, totalFiles int64
 
-		mainSlot = utils.NewSlot(args.Concurrency)
-		sc       = make(chan obs.ObsPathAnalyzed, 1)
-	)
-
-	mainSlot.DoNow(func() {
-		var wg sync.WaitGroup
-		subSlot := utils.NewSlot(args.Concurrency)
-		for _, p := range inputs {
-			c := make(chan obs.ObsPathChunked, 1)
-			mainSlot.Do(func() {
-				chunk := args.ObsClient.SplitChunk(args.MinChunks, p)
-				logger.Debug("path chunked.", logger.Args(
-					"countDirs", len(chunk.Dirs),
-					"countFiles", len(chunk.Files),
-					"extraDirs", chunk.ExtraDirs,
-				))
-				c <- chunk
-				close(c)
-			})
-			wg.Add(1)
-			subSlot.Do(func() {
-				sc <- args.ObsClient.AnalyzeChunk(mainSlot, <-c)
-				if prog != nil {
-					prog.Increment()
-				}
-				wg.Done()
-			})
-		}
-		wg.Wait()
-		close(sc)
-	})
-
-	for stats := range sc {
+	slot := utils.NewSlot(args.Concurrency)
+	for stats := range obsAnalyzer(slot, prog, args.ObsClient, inputs, args.MinChunks) {
 		if stats.Exists {
 			utils.WriteOutput(stats)
 			pterm.Printf(
@@ -160,7 +130,7 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 			logger.Error(stats.URI() + ": no such file or directory")
 		}
 	}
-	mainSlot.Close()
+	slot.Close()
 
 	if prog != nil {
 		prog.Stop()
@@ -177,4 +147,55 @@ func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 			time.Unix(0, lastModified*int64(time.Millisecond)).Format("2006-01-02 15:04:05.000"),
 		)
 	}
+}
+
+func obsAnalyzer(
+	slot *utils.Slot, prog *utils.ProgressBar,
+	obsClient *obs.ObsClient, inputs []obs.ObsPath, minChunks int,
+) <-chan obs.ObsPathAnalyzed {
+	var (
+		stats   = make(chan obs.ObsPathAnalyzed, 1)
+		subSlot = utils.NewSlot(slot.Concurrency)
+	)
+	if minChunks > 1 {
+		slot.DoNow(func() {
+			for _, p := range inputs {
+				c := make(chan obs.ObsPathChunked, 1)
+				slot.Do(func() {
+					chunk := obsClient.SplitChunk(minChunks, p)
+					logger.Debug("path chunked.", logger.Args(
+						"countDirs", len(chunk.Dirs),
+						"countFiles", len(chunk.Files),
+						"extraDirs", chunk.ExtraDirs,
+					))
+					c <- chunk
+					close(c)
+				})
+				subSlot.Do(func() {
+					s := obsClient.AnalyzeChunk(slot, <-c)
+					if prog != nil {
+						prog.Increment()
+					}
+					stats <- s
+				})
+			}
+			subSlot.Close()
+			close(stats)
+		})
+	} else {
+		slot.DoNow(func() {
+			for _, p := range inputs {
+				subSlot.Do(func() {
+					s := obsClient.Analyze(p)
+					if prog != nil {
+						prog.Increment()
+					}
+					stats <- s
+				})
+			}
+			subSlot.Close()
+			close(stats)
+		})
+	}
+	return stats
 }

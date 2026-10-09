@@ -20,7 +20,7 @@ type Slot struct {
 }
 
 func (s *Slot) Close(noWait ...bool) {
-	wait := len(noWait) > 0 && noWait[0]
+	wait := len(noWait) < 1 || !noWait[0]
 	if s.started.CompareAndSwap(true, false) {
 		close(s.queue)
 		if !wait {
