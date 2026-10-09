@@ -19,7 +19,7 @@ import (
 const IamListUsersVersion = "2026.09.05-0"
 
 func IamListUsers(args *arguments.IamListUsersArgs) {
-	logger.Debug("using iam list users args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using iam list users args.", logger.Args(internal.StructToArgs(args)...))
 
 	outFile := os.Stdout
 	if args.OutputFile != "" {

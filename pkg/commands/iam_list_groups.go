@@ -13,7 +13,7 @@ import (
 const IamListGroupsVersion = "2026.08.05-0"
 
 func IamListGroups(args *arguments.IamListGroupsArgs) {
-	logger.Debug("using iam list groups args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using iam list groups args.", logger.Args(internal.StructToArgs(args)...))
 
 	outFile := os.Stdout
 	if args.OutputFile != "" {

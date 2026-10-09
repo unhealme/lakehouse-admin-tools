@@ -28,7 +28,7 @@ func parseArgs() (args, cfg *config.Arguments) {
 		logger.SetLogger(logger.Logger().WithLevel(pterm.LogLevelDebug))
 	}
 
-	logger.Debug("parsed arguments.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("parsed arguments.", logger.Args(internal.StructToArgs(args)...))
 
 	if args.NoColor {
 		pterm.DisableColor()
@@ -36,7 +36,7 @@ func parseArgs() (args, cfg *config.Arguments) {
 
 	cfg = config.GetConfig(args.ConfigFile)
 	arg.MustParse(cfg)
-	logger.Debug("current config.", logger.Args(internal.ToArgs(*cfg)...))
+	logger.Debug("current config.", logger.Args(internal.StructToArgs(cfg)...))
 
 	return
 }

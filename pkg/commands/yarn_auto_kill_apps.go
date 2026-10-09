@@ -12,7 +12,7 @@ import (
 const YarnAutoKillAppsVersion = "2026.10.05-0"
 
 func YarnAutoKillApps(args *arguments.YarnAutoKillAppsArgs) {
-	logger.Debug("using auto kill apps args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using auto kill apps args.", logger.Args(internal.StructToArgs(args)...))
 	apps, err := args.YarnClient.Applications([]yarn.ApplicationState{yarn.RUNNING}, "", "", 0)
 	if err != nil {
 		logger.Fatal("unable to get yarn applications.", logger.Args("error", err))

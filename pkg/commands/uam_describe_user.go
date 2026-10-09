@@ -15,7 +15,7 @@ import (
 const UamDescribeUserVersion = "2026.10.09-0"
 
 func UamDescribeUser(args *arguments.UamDescribeUserArgs) {
-	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using describe user args.", logger.Args(internal.StructToArgs(args)...))
 
 	userInputs := args.Users
 	if args.InputFile != "" || len(args.Users) < 1 {

@@ -17,7 +17,7 @@ import (
 const MrsListHetuTenantsVersion = "2026.08.05-0"
 
 func MrsListHetuTenants(args *arguments.MrsListHetuTenantsArgs) {
-	logger.Debug("using list hetu tenants args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using list hetu tenants args.", logger.Args(internal.StructToArgs(args)...))
 
 	resp, err := args.MrsClient.GetClusterManagerToken(args.MrsClusterId)
 	if err != nil {

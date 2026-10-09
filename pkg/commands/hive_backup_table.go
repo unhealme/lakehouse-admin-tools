@@ -16,7 +16,7 @@ import (
 const HiveBackupTableVersion = "2026.10.09-0"
 
 func HiveBackupTable(args *arguments.HiveBackupTableArgs) {
-	logger.Debug("using backup table args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using backup table args.", logger.Args(internal.StructToArgs(args)...))
 	c := args.HiveServerClient.SetMaxConnections(args.Concurrency)
 
 	tableInputs := args.Tables

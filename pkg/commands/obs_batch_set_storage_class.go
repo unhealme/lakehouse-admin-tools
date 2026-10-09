@@ -30,7 +30,7 @@ type ObsBatchSetStorageClassInput struct {
 }
 
 func ObsBatchSetStorageClass(args *arguments.ObsBatchSetStorageClassArgs) {
-	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using batch set storage class args.", logger.Args(internal.StructToArgs(args)...))
 	for _, inputFile := range args.InputFiles {
 		buf, err := os.ReadFile(inputFile)
 		if err != nil {

@@ -13,7 +13,7 @@ import (
 const UamListMembersVersion = "2026.08.19-0"
 
 func UamListMembers(args *arguments.UamListMembersArgs) {
-	logger.Debug("using list member args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using list member args.", logger.Args(internal.StructToArgs(args)...))
 	for _, group := range args.Groups {
 		groupInfos, err := args.UamClient.ListMembers(args.BaseDn, group, args.Unsafe)
 		if err != nil {

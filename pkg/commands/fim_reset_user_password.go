@@ -11,7 +11,7 @@ import (
 const FimResetUserPasswordVersion = "2026.08.19-0"
 
 func FimResetUserPassword(args *arguments.FimResetUserPasswordArgs) {
-	logger.Debug("using reset user password args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using reset user password args.", logger.Args(internal.StructToArgs(args)...))
 
 	if err := args.FimClient.BasicLogin(args.LoginUser, args.LoginPass); err != nil {
 		logger.Fatal("unable to login to FIM.", logger.Args("error", err))

@@ -17,7 +17,7 @@ import (
 const ObsBatchRenameVersion = "2026.09.05-0"
 
 func ObsBatchRename(args *arguments.ObsBatchRenameArgs) {
-	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using batch rename args.", logger.Args(internal.StructToArgs(args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {
 		logger.Warn("skipping input due to error.", logger.Args("path", args.Path, "error", err))

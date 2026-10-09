@@ -15,7 +15,7 @@ import (
 const YarnListAppsVersion = "2026.09.17-0"
 
 func YarnListApps(args *arguments.YarnListAppsArgs) {
-	logger.Debug("using list apps args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using list apps args.", logger.Args(internal.StructToArgs(args)...))
 
 	outputHeaders := []string{
 		"Id",

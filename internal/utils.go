@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strings"
 )
 
 func GetEnv(k, def string) string {
@@ -14,16 +13,20 @@ func GetEnv(k, def string) string {
 	return def
 }
 
-func ToArgs(a any) []any {
-	var (
-		args []any
-		v    = reflect.ValueOf(a)
-	)
-	for _, f := range reflect.VisibleFields(reflect.TypeOf(a)) {
-		if !strings.HasPrefix(f.Name, "_") {
-			args = append(args, f.Name)
-			args = append(args, fmt.Sprintf("%#v", v.FieldByName(f.Name)))
-		}
+func StructToArgs(a any) (args []any) {
+	va := reflect.ValueOf(a)
+	if va.Kind() == reflect.Pointer {
+		va = va.Elem()
 	}
-	return args
+	if va.Kind() != reflect.Struct {
+		return
+	}
+
+	for f, v := range va.Fields() {
+		if f.Tag.Get("arg") == "-" {
+			continue
+		}
+		args = append(args, f.Name, fmt.Sprintf("%+v", v))
+	}
+	return
 }

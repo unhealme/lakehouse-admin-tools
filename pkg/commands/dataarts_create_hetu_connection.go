@@ -12,7 +12,7 @@ import (
 const DataArtsCreateHetuConnectionVersion = "2026.07.07-0"
 
 func DataArtsCreateHetuConnection(args *arguments.DataArtsCreateHetuConnectionArgs) {
-	logger.Debug("using create hetu connection args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using create hetu connection args.", logger.Args(internal.StructToArgs(args)...))
 	for _, userPair := range args.UserPairs {
 		userName, workspaceName, _ := strings.Cut(userPair, ":")
 		logArgs := func(err error) []pterm.LoggerArgument {

@@ -13,7 +13,7 @@ import (
 const MrsDumpHetuClustersVersion = "2026.08.06-0"
 
 func MrsDumpHetuClusters(args *arguments.MrsDumpHetuClustersArgs) {
-	logger.Debug("using dump hetu clusters args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using dump hetu clusters args.", logger.Args(internal.StructToArgs(args)...))
 
 	resp, err := args.MrsClient.GetClusterManagerToken(args.MrsClusterId)
 	if err != nil {

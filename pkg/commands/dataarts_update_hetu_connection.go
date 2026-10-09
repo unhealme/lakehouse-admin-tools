@@ -13,7 +13,7 @@ import (
 const DataArtsUpdateHetuConnectionVersion = "2026.07.18-0"
 
 func DataArtsUpdateHetuConnection(args *arguments.DataArtsUpdateHetuConnectionArgs) {
-	logger.Debug("using update hetu connection args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using update hetu connection args.", logger.Args(internal.StructToArgs(args)...))
 	tenantDev, tenantProd, hasDev := strings.Cut(args.Tenant, ":")
 	if !hasDev {
 		tenantProd, tenantDev = tenantDev, tenantProd

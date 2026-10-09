@@ -20,7 +20,7 @@ import (
 const PsAutoKillVersion = "2026.06.30-1"
 
 func PsAutoKill(args *arguments.PsAutoKillArgs) {
-	logger.Debug("using auto kill args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using auto kill args.", logger.Args(internal.StructToArgs(args)...))
 	procs, err := process.Processes()
 	if err != nil {
 		logger.Fatal("unable to list processes", logger.Args("error", err))

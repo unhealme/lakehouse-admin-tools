@@ -16,7 +16,7 @@ import (
 const ObsAnalyzeVersion = "2026.10.09-0"
 
 func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
-	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
+	logger.Debug("using analyze args.", logger.Args(internal.StructToArgs(args)...))
 	if args.CsvOut != "" && args.CsvOut == args.JsonOut {
 		logger.Fatal("unable to write csv and json output to the same file.")
 	}
