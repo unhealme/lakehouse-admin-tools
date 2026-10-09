@@ -8,13 +8,13 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
-	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 type ObsClient struct{ *obs.ObsClient }
 
-func (c ObsClient) iterPaths(logger *pterm.Logger, i obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
+func (c ObsClient) iterPaths(i obs.ListObjectsInput, depth int, dirOnly bool) iter.Seq[ObsPathContent] {
 	return func(yield func(ObsPathContent) bool) {
 		path := "obs://" + i.Bucket + "/" + i.Prefix
 		for p := 1; true; p++ {
@@ -50,9 +50,9 @@ func (c ObsClient) iterPaths(logger *pterm.Logger, i obs.ListObjectsInput, depth
 	}
 }
 
-func (c ObsClient) Analyze(logger *pterm.Logger, path ObsPath) ObsPathAnalyzed {
+func (c ObsClient) Analyze(path ObsPath) ObsPathAnalyzed {
 	stats := ObsPathAnalyzed{ObsPath: path}
-	for op := range c.Walk0(logger, path, false) {
+	for op := range c.Walk0(path, false) {
 		suffix := strings.TrimPrefix(op.Key, strings.TrimSuffix(path.Key, "/"))
 		if suffix != "" && !strings.HasPrefix(suffix, "/") {
 			// skip prefix only match
@@ -87,7 +87,7 @@ func (c ObsClient) Analyze(logger *pterm.Logger, path ObsPath) ObsPathAnalyzed {
 	return stats
 }
 
-func (c ObsClient) AnalyzeChunk(logger *pterm.Logger, slot *utils.Slot, chunk ObsPathChunked) ObsPathAnalyzed {
+func (c ObsClient) AnalyzeChunk(slot *utils.Slot, chunk ObsPathChunked) ObsPathAnalyzed {
 	stats := ObsPathAnalyzed{
 		ObsPath:  chunk.ObsPath,
 		DirCount: int64(len(chunk.Dirs) + chunk.ExtraDirs - 1),
@@ -110,7 +110,7 @@ func (c ObsClient) AnalyzeChunk(logger *pterm.Logger, slot *utils.Slot, chunk Ob
 	}
 
 	for ds := range slot.MapValue(func(path ObsPath) ObsPathAnalyzed {
-		return c.Analyze(logger, path)
+		return c.Analyze(path)
 	}, chunk.Dirs, false) {
 		stats.DirCount += ds.DirCount
 		stats.FileCount += ds.FileCount
@@ -125,7 +125,7 @@ func (c ObsClient) AnalyzeChunk(logger *pterm.Logger, slot *utils.Slot, chunk Ob
 	return stats
 }
 
-func (c ObsClient) Glob(logger *pterm.Logger, path ObsPath) (matchKeys []string) {
+func (c ObsClient) Glob(path ObsPath) (matchKeys []string) {
 	if _, err := glob.Compile(path.Key, '/'); err != nil {
 		return
 	}
@@ -137,7 +137,7 @@ func (c ObsClient) Glob(logger *pterm.Logger, path ObsPath) (matchKeys []string)
 			} else {
 				var nextKeys []string
 				for _, k := range matchKeys {
-					for op := range c.Walk(logger, path.WithKey(k), 1, false) {
+					for op := range c.Walk(path.WithKey(k), 1, false) {
 						if SameObsKey(strings.TrimPrefix(op.Key, k), key.segment) {
 							logger.Debug(fmt.Sprintf("%s match with %s", op.Key, key.segment))
 							nextKeys = append(nextKeys, op.Key)
@@ -159,7 +159,7 @@ func (c ObsClient) Glob(logger *pterm.Logger, path ObsPath) (matchKeys []string)
 				if !strings.HasSuffix(k, "/") {
 					k += "/"
 				}
-				for op := range c.Walk(logger, path.WithKey(k), 1, false) {
+				for op := range c.Walk(path.WithKey(k), 1, false) {
 					name := strings.TrimPrefix(op.Key, k)
 					if name != "" && g.Match(name) {
 						nextKeys = append(nextKeys, op.Key)
@@ -184,7 +184,7 @@ func (c ObsClient) ReadFile(path ObsPath) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func (c ObsClient) RenameObject(logger *pterm.Logger, path ObsPath, keyAfter string) {
+func (c ObsClient) RenameObject(path ObsPath, keyAfter string) {
 	fullKey := path.URI()
 	argsOk := logger.Args("before", fullKey, "after", path.WithKey(keyAfter).URI())
 	if strings.HasSuffix(path.Key, "/") {
@@ -212,7 +212,7 @@ func (c ObsClient) RenameObject(logger *pterm.Logger, path ObsPath, keyAfter str
 	}
 }
 
-func (c ObsClient) SetStorageClass(logger *pterm.Logger, path ObsPath, class obs.StorageClassType) {
+func (c ObsClient) SetStorageClass(path ObsPath, class obs.StorageClassType) {
 	_, err := c.SetObjectMetadata(&obs.SetObjectMetadataInput{
 		Bucket:            path.Bucket,
 		Key:               path.Key,
@@ -226,7 +226,7 @@ func (c ObsClient) SetStorageClass(logger *pterm.Logger, path ObsPath, class obs
 	}
 }
 
-func (c ObsClient) SplitChunk(logger *pterm.Logger, minChunks int, path ObsPath) (chunk ObsPathChunked) {
+func (c ObsClient) SplitChunk(minChunks int, path ObsPath) (chunk ObsPathChunked) {
 	chunk = ObsPathChunked{ObsPath: path}
 	i := obs.ListObjectsInput{
 		Bucket:       path.Bucket,
@@ -241,7 +241,7 @@ func (c ObsClient) SplitChunk(logger *pterm.Logger, minChunks int, path ObsPath)
 		paths, nextDepth = nextDepth, nil
 		for n, p := range paths {
 			i.Prefix = p
-			for op := range c.iterPaths(logger, i, depth, false) {
+			for op := range c.iterPaths(i, depth, false) {
 				suffix := strings.TrimPrefix(op.Key, strings.TrimSuffix(p, "/"))
 				if suffix != "" && !strings.HasPrefix(suffix, "/") {
 					// skip prefix only match
@@ -269,7 +269,7 @@ func (c ObsClient) SplitChunk(logger *pterm.Logger, minChunks int, path ObsPath)
 	return
 }
 
-func (c ObsClient) Walk(logger *pterm.Logger, path ObsPath, maxDepth int, dirOnly bool) iter.Seq[ObsPathContent] {
+func (c ObsClient) Walk(path ObsPath, maxDepth int, dirOnly bool) iter.Seq[ObsPathContent] {
 	i := obs.ListObjectsInput{
 		Bucket:       path.Bucket,
 		MaxKeys:      1000,
@@ -284,7 +284,7 @@ func (c ObsClient) Walk(logger *pterm.Logger, path ObsPath, maxDepth int, dirOnl
 			dirs, next = next, nil
 			for _, p := range dirs {
 				i.Prefix = p
-				for op := range c.iterPaths(logger, i, depth, dirOnly) {
+				for op := range c.iterPaths(i, depth, dirOnly) {
 					if depth == 1 || !SameObsKey(p, op.Key) {
 						if !yield(op) {
 							return
@@ -299,14 +299,14 @@ func (c ObsClient) Walk(logger *pterm.Logger, path ObsPath, maxDepth int, dirOnl
 	}
 }
 
-func (c ObsClient) Walk0(logger *pterm.Logger, path ObsPath, dirOnly bool) iter.Seq[ObsPathContent] {
+func (c ObsClient) Walk0(path ObsPath, dirOnly bool) iter.Seq[ObsPathContent] {
 	i := obs.ListObjectsInput{
 		Bucket:       path.Bucket,
 		MaxKeys:      1000,
 		EncodingType: "url",
 		Prefix:       path.Key,
 	}
-	return c.iterPaths(logger, i, -1, dirOnly)
+	return c.iterPaths(i, -1, dirOnly)
 }
 
 func (c ObsClient) WriteFile(path ObsPath, data io.Reader) error {

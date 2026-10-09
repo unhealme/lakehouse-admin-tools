@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"os"
 
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/hetu"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 )
 
 const MrsDumpHetuClustersVersion = "2026.08.06-0"
 
-func MrsDumpHetuClusters(logger *pterm.Logger, args *arguments.MrsDumpHetuClustersArgs) {
+func MrsDumpHetuClusters(args *arguments.MrsDumpHetuClustersArgs) {
 	logger.Debug("using dump hetu clusters args.", logger.Args(internal.ToArgs(*args)...))
 
 	resp, err := args.MrsClient.GetClusterManagerToken(args.MrsClusterId)
@@ -23,7 +23,7 @@ func MrsDumpHetuClusters(logger *pterm.Logger, args *arguments.MrsDumpHetuCluste
 		logger.Fatal("unable to login to FIM.", logger.Args("error", err))
 	}
 
-	hetuAuth, err := args.FimClient.GetHetuEngineAuth(logger, args.FimClusterId)
+	hetuAuth, err := args.FimClient.GetHetuEngineAuth(args.FimClusterId)
 	if err != nil {
 		logger.Fatal("unable to get Hetu auth.", logger.Args("error", err))
 	}

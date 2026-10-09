@@ -5,12 +5,12 @@ import (
 	"path/filepath"
 
 	yaml "github.com/goccy/go-yaml"
-	"github.com/pterm/pterm"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 )
 
 const configFileName = "lakehouse-admin-tools.conf"
 
-func getConfigFromBuffer(logger *pterm.Logger, buf []byte) *Arguments {
+func getConfigFromBuffer(buf []byte) *Arguments {
 	var c Arguments
 	if err := yaml.Unmarshal(buf, &c); err != nil {
 		logger.Debug("unable to load config.", logger.Args("error", err))
@@ -33,14 +33,14 @@ func readConfigPath() []byte {
 	return nil
 }
 
-func GetConfig(logger *pterm.Logger, path string) *Arguments {
+func GetConfig(path string) *Arguments {
 	if path != "" {
 		if buf, err := os.ReadFile(path); err == nil {
-			return getConfigFromBuffer(logger, buf)
+			return getConfigFromBuffer(buf)
 		} else {
 			logger.Warn("unable to load config from path.", logger.Args("path", path, "error", err))
-			return getConfigFromBuffer(logger, nil)
+			return getConfigFromBuffer(nil)
 		}
 	}
-	return getConfigFromBuffer(logger, readConfigPath())
+	return getConfigFromBuffer(readConfigPath())
 }

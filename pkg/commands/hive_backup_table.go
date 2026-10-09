@@ -8,13 +8,14 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const HiveBackupTableVersion = "2026.10.09-0"
 
-func HiveBackupTable(logger *pterm.Logger, args *arguments.HiveBackupTableArgs) {
+func HiveBackupTable(args *arguments.HiveBackupTableArgs) {
 	logger.Debug("using backup table args.", logger.Args(internal.ToArgs(*args)...))
 	c := args.HiveServerClient.SetMaxConnections(args.Concurrency)
 

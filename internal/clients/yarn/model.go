@@ -23,3 +23,5 @@ type Application struct {
 	MemorySeconds   int64            `json:"memorySeconds"` // megabytes
 	VcoreSeconds    int64            `json:"vcoreSeconds"`
 }
+
+var killAppBody = []byte(`{"state":"KILLED"}`)

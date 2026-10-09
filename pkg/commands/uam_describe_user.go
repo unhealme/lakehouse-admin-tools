@@ -5,16 +5,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/uam"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const UamDescribeUserVersion = "2026.10.09-0"
 
-func UamDescribeUser(logger *pterm.Logger, args *arguments.UamDescribeUserArgs) {
+func UamDescribeUser(args *arguments.UamDescribeUserArgs) {
 	logger.Debug("using describe user args.", logger.Args(internal.ToArgs(*args)...))
 
 	userInputs := args.Users

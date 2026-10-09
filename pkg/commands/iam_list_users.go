@@ -11,13 +11,14 @@ import (
 	model "github.com/huaweicloud/huaweicloud-sdk-go-v3/services/iam/v3/model"
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const IamListUsersVersion = "2026.09.05-0"
 
-func IamListUsers(logger *pterm.Logger, args *arguments.IamListUsersArgs) {
+func IamListUsers(args *arguments.IamListUsersArgs) {
 	logger.Debug("using iam list users args.", logger.Args(internal.ToArgs(*args)...))
 
 	outFile := os.Stdout

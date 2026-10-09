@@ -7,16 +7,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/hetu"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const MrsListHetuTenantsVersion = "2026.08.05-0"
 
-func MrsListHetuTenants(logger *pterm.Logger, args *arguments.MrsListHetuTenantsArgs) {
+func MrsListHetuTenants(args *arguments.MrsListHetuTenantsArgs) {
 	logger.Debug("using list hetu tenants args.", logger.Args(internal.ToArgs(*args)...))
 
 	resp, err := args.MrsClient.GetClusterManagerToken(args.MrsClusterId)
@@ -27,7 +27,7 @@ func MrsListHetuTenants(logger *pterm.Logger, args *arguments.MrsListHetuTenants
 		logger.Fatal("unable to login to FIM.", logger.Args("error", err))
 	}
 
-	hetuAuth, err := args.FimClient.GetHetuEngineAuth(logger, args.FimClusterId)
+	hetuAuth, err := args.FimClient.GetHetuEngineAuth(args.FimClusterId)
 	if err != nil {
 		logger.Fatal("unable to get Hetu auth.", logger.Args("error", err))
 	}
@@ -64,7 +64,7 @@ func MrsListHetuTenants(logger *pterm.Logger, args *arguments.MrsListHetuTenants
 	}
 	now := time.Now().In(time.FixedZone("UTC+7", 7*3600))
 	now = now.Add(-time.Duration(now.Minute()) * time.Minute).Add(-time.Duration(now.Second()) * time.Second)
-	for tenant := range hetuClient.IterTenantInfo(logger) {
+	for tenant := range hetuClient.IterTenantInfo() {
 		if err := writer.Write([]string{
 			strconv.FormatInt(now.Unix(), 10),
 			tenant.Tenant,

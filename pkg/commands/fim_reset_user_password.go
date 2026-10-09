@@ -3,13 +3,14 @@ package commands
 import (
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const FimResetUserPasswordVersion = "2026.08.19-0"
 
-func FimResetUserPassword(logger *pterm.Logger, args *arguments.FimResetUserPasswordArgs) {
+func FimResetUserPassword(args *arguments.FimResetUserPasswordArgs) {
 	logger.Debug("using reset user password args.", logger.Args(internal.ToArgs(*args)...))
 
 	if err := args.FimClient.BasicLogin(args.LoginUser, args.LoginPass); err != nil {

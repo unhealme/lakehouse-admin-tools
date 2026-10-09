@@ -15,30 +15,30 @@ import (
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/obs"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/uam"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/yarn"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/commands"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/config"
 )
 
-var logger = pterm.DefaultLogger.WithLevel(pterm.LogLevelInfo).WithWriter(os.Stderr).WithMaxWidth(200)
-
-func parseArgs() (*config.Arguments, *config.Arguments) {
-	var args config.Arguments
-	arg.MustParse(&args)
-	logger.Debug("parsed arguments.", logger.Args(internal.ToArgs(args)...))
+func parseArgs() (args, cfg *config.Arguments) {
+	args = new(config.Arguments)
+	arg.MustParse(args)
 
 	if args.Verbose {
-		logger = logger.WithLevel(pterm.LogLevelDebug)
+		logger.SetLogger(logger.Logger().WithLevel(pterm.LogLevelDebug))
 	}
+
+	logger.Debug("parsed arguments.", logger.Args(internal.ToArgs(*args)...))
 
 	if args.NoColor {
 		pterm.DisableColor()
 	}
 
-	cfg := config.GetConfig(logger, args.ConfigFile)
+	cfg = config.GetConfig(args.ConfigFile)
 	arg.MustParse(cfg)
 	logger.Debug("current config.", logger.Args(internal.ToArgs(*cfg)...))
 
-	return &args, cfg
+	return
 }
 
 func main() {
@@ -72,7 +72,7 @@ func main() {
 				subArgs.AgentName = cfg.DataArts.Agent.Name
 			}
 
-			commands.DataArtsCreateHetuConnection(logger, subArgs)
+			commands.DataArtsCreateHetuConnection(subArgs)
 		case args.DataArts.UpdateHetuConnection != nil:
 			subArgs := args.DataArts.UpdateHetuConnection
 			subArgs.DomainId = cfg.DomainId
@@ -80,7 +80,7 @@ func main() {
 			subArgs.DataArtsClient = dasClient
 			subArgs.HetuConfig = cfg.DataArts.HetuConfig
 
-			commands.DataArtsUpdateHetuConnection(logger, subArgs)
+			commands.DataArtsUpdateHetuConnection(subArgs)
 		}
 	case args.Fim != nil:
 		address, mapped := cfg.Fim.Addresses[cfg.Fim.Address]
@@ -103,7 +103,7 @@ func main() {
 				subArgs.DefaultPass = cfg.Fim.DefaultPassword
 			}
 
-			commands.FimResetUserPassword(logger, subArgs)
+			commands.FimResetUserPassword(subArgs)
 		}
 	case args.Hive != nil:
 		hiveServerClient, err := hive.NewHSClient(cfg.Hive.Url)
@@ -121,7 +121,7 @@ func main() {
 			subArgs := args.Hive.BackupTable
 			subArgs.HiveServerClient = hiveServerClient
 
-			commands.HiveBackupTable(logger, subArgs)
+			commands.HiveBackupTable(subArgs)
 		}
 	case args.Iam != nil:
 		logger.Debug("creating IAM client.")
@@ -136,13 +136,13 @@ func main() {
 			subArgs.DomainId = cfg.DomainId
 			subArgs.IamClient = iamClient
 
-			commands.IamListUsers(logger, subArgs)
+			commands.IamListUsers(subArgs)
 		case args.Iam.ListGroups != nil:
 			subArgs := args.Iam.ListGroups
 			subArgs.DomainId = cfg.DomainId
 			subArgs.IamClient = iamClient
 
-			commands.IamListGroups(logger, subArgs)
+			commands.IamListGroups(subArgs)
 		}
 	case args.Mrs != nil:
 		mrsClient, err := mrs.NewClient(cfg.AccessKey, cfg.SecretKey, cfg.SessionToken, cfg.Region, cfg.Mrs.ProxyAddress)
@@ -170,7 +170,7 @@ func main() {
 			defer fimClient.Close()
 			subArgs.FimClient = fimClient
 
-			commands.MrsDumpHetuClusters(logger, subArgs)
+			commands.MrsDumpHetuClusters(subArgs)
 		case args.Mrs.ListHetuTenants != nil:
 			subArgs := args.Mrs.ListHetuTenants
 			subArgs.MrsClient = mrsClient
@@ -190,7 +190,7 @@ func main() {
 			defer fimClient.Close()
 			subArgs.FimClient = fimClient
 
-			commands.MrsListHetuTenants(logger, subArgs)
+			commands.MrsListHetuTenants(subArgs)
 		}
 	case args.Obs != nil:
 		obsClient, err := obs.NewClient(cfg.Obs.Endpoint, cfg.AccessKey, cfg.SecretKey, cfg.SessionToken)
@@ -204,7 +204,7 @@ func main() {
 			subArgs := args.Obs.Analyze
 			subArgs.ObsClient = obsClient
 
-			commands.ObsAnalyze(logger, subArgs)
+			commands.ObsAnalyze(subArgs)
 		case args.Obs.BatchRename != nil:
 			subArgs := args.Obs.BatchRename
 			subArgs.ObsClient = obsClient
@@ -212,21 +212,21 @@ func main() {
 				subArgs.Path += "/"
 			}
 
-			commands.ObsBatchRename(logger, subArgs)
+			commands.ObsBatchRename(subArgs)
 		case args.Obs.BatchSetStorageClass != nil:
 			subArgs := args.Obs.BatchSetStorageClass
 			subArgs.ObsClient = obsClient
 
-			commands.ObsBatchSetStorageClass(logger, subArgs)
+			commands.ObsBatchSetStorageClass(subArgs)
 		}
 	case args.Ps != nil:
 		switch {
 		case args.Ps.AutoKill != nil:
-			commands.PsAutoKill(logger, args.Ps.AutoKill)
+			commands.PsAutoKill(args.Ps.AutoKill)
 		}
 	case args.Uam != nil:
 		uamClient, err := uam.NewClient(
-			logger, cfg.Uam.Url, cfg.Uam.User, cfg.Uam.Password,
+			cfg.Uam.Url, cfg.Uam.User, cfg.Uam.Password,
 			cfg.Uam.MailDomain, cfg.Uam.Realm,
 		)
 		if err != nil {
@@ -241,16 +241,16 @@ func main() {
 			subArgs.GroupBase = cfg.Uam.GroupBase
 			subArgs.UamClient = uamClient
 
-			commands.UamDescribeUser(logger, subArgs)
+			commands.UamDescribeUser(subArgs)
 		case args.Uam.ListMembers != nil:
 			subArgs := args.Uam.ListMembers
 			subArgs.BaseDn = cfg.Uam.BaseDN
 			subArgs.UamClient = uamClient
 
-			commands.UamListMembers(logger, subArgs)
+			commands.UamListMembers(subArgs)
 		}
 	case args.Yarn != nil:
-		yarnClient, err := yarn.NewClient(logger, []string(cfg.Yarn.RMAddress))
+		yarnClient, err := yarn.NewClient([]string(cfg.Yarn.RMAddress))
 		if err != nil {
 			logger.Fatal("unable to create YARN client.", logger.Args("error", err))
 		}
@@ -261,12 +261,12 @@ func main() {
 			subArgs := args.Yarn.AutoKillApps
 			subArgs.YarnClient = yarnClient
 
-			commands.YarnAutoKillApps(logger, subArgs)
+			commands.YarnAutoKillApps(subArgs)
 		case args.Yarn.ListApps != nil:
 			subArgs := args.Yarn.ListApps
 			subArgs.YarnClient = yarnClient
 
-			commands.YarnListApps(logger, subArgs)
+			commands.YarnListApps(subArgs)
 		}
 	}
 }

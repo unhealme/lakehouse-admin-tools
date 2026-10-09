@@ -7,9 +7,9 @@ import (
 	"time"
 
 	req "github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
 	"github.com/tidwall/gjson"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 )
 
 type HetuClient struct {
@@ -83,7 +83,7 @@ func (c *HetuClient) GetToken() error {
 	return nil
 }
 
-func (c HetuClient) IterCluster(logger *pterm.Logger) iter.Seq[*Cluster] {
+func (c HetuClient) IterCluster() iter.Seq[*Cluster] {
 	return func(yield func(*Cluster) bool) {
 		page := 1
 		total := 0
@@ -107,7 +107,7 @@ func (c HetuClient) IterCluster(logger *pterm.Logger) iter.Seq[*Cluster] {
 	}
 }
 
-func (c HetuClient) IterTenantInfo(logger *pterm.Logger) iter.Seq[*TenantInfo] {
+func (c HetuClient) IterTenantInfo() iter.Seq[*TenantInfo] {
 	return func(yield func(*TenantInfo) bool) {
 		page := 1
 		total := 0

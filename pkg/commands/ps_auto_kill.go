@@ -10,16 +10,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pterm/pterm"
 	"github.com/shirou/gopsutil/v4/process"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const PsAutoKillVersion = "2026.06.30-1"
 
-func PsAutoKill(logger *pterm.Logger, args *arguments.PsAutoKillArgs) {
+func PsAutoKill(args *arguments.PsAutoKillArgs) {
 	logger.Debug("using auto kill args.", logger.Args(internal.ToArgs(*args)...))
 	procs, err := process.Processes()
 	if err != nil {

@@ -9,10 +9,10 @@ import (
 	"time"
 
 	req "github.com/imroc/req/v3"
-	"github.com/pterm/pterm"
 	"github.com/tidwall/gjson"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/hetu"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 )
 
 type FimClient struct {
@@ -40,7 +40,7 @@ func (c FimClient) Clusters() (clusters Clusters, err error) {
 	return
 }
 
-func (c FimClient) GetHetuEngineAuth(logger *pterm.Logger, clusterId int) (*hetu.HetuAuth, error) {
+func (c FimClient) GetHetuEngineAuth(clusterId int) (*hetu.HetuAuth, error) {
 	links, err := c.getHetuEngineLinks(clusterId)
 	if err != nil {
 		return nil, err

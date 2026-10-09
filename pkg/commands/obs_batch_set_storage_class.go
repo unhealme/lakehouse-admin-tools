@@ -15,6 +15,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/obs"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
@@ -28,7 +29,7 @@ type ObsBatchSetStorageClassInput struct {
 	Exclude     []string
 }
 
-func ObsBatchSetStorageClass(logger *pterm.Logger, args *arguments.ObsBatchSetStorageClassArgs) {
+func ObsBatchSetStorageClass(args *arguments.ObsBatchSetStorageClassArgs) {
 	logger.Debug("using batch set storage class args.", logger.Args(internal.ToArgs(*args)...))
 	for _, inputFile := range args.InputFiles {
 		buf, err := os.ReadFile(inputFile)
@@ -42,12 +43,12 @@ func ObsBatchSetStorageClass(logger *pterm.Logger, args *arguments.ObsBatchSetSt
 			continue
 		}
 		for _, input := range inputs {
-			processBatchSetStorageClassInput(logger, input, args)
+			processBatchSetStorageClassInput(input, args)
 		}
 	}
 }
 
-func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetStorageClassInput, args *arguments.ObsBatchSetStorageClassArgs) {
+func processBatchSetStorageClassInput(input ObsBatchSetStorageClassInput, args *arguments.ObsBatchSetStorageClassArgs) {
 	inputPath, err := obs.PathFromURI(input.Path)
 	if err != nil {
 		logger.Warn("skipping input due to error.", logger.Args("path", input.Path, "error", err))
@@ -55,7 +56,7 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 	}
 	actualRun := func(key string) {
 		if !args.DryRun {
-			processSetStorageClass(logger, args.ObsClient, inputPath.WithKey(key), input.TargetClass, args.NoProg, args.Concurrency)
+			processSetStorageClass(args.ObsClient, inputPath.WithKey(key), input.TargetClass, args.NoProg, args.Concurrency)
 		} else {
 			logger.Info("setting storage class for object.", logger.Args("path", inputPath.WithKey(key).URI(), "class", input.TargetClass))
 			time.Sleep(200 + rand.N(300*time.Millisecond))
@@ -70,7 +71,7 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 			if !strings.HasSuffix(inputPath.Key, "/") {
 				inputPath.Key += "/"
 			}
-			for p := range args.ObsClient.Walk(logger, *inputPath, 1, true) {
+			for p := range args.ObsClient.Walk(*inputPath, 1, true) {
 				if _, skip := excludes[p.Name()]; !skip {
 					if !yield(p) {
 						return
@@ -115,17 +116,17 @@ func processBatchSetStorageClassInput(logger *pterm.Logger, input ObsBatchSetSto
 	}
 }
 
-func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, basePath obs.ObsPath, storageClass obs.StorageClassType, noProg bool, concurrency int) {
+func processSetStorageClass(obsClient *obs.ObsClient, basePath obs.ObsPath, storageClass obs.StorageClassType, noProg bool, concurrency int) {
 	if !strings.HasSuffix(basePath.Key, "/") {
 		basePath.Key += "/"
 	}
-	walker := obsClient.Walk(logger, basePath, -1, false)
+	walker := obsClient.Walk(basePath, -1, false)
 	slot := utils.NewSlot(max(concurrency, 1))
 	if noProg {
 		slot.Map(
 			func(path obs.ObsPathContent) {
 				if !path.IsDir() {
-					obsClient.SetStorageClass(logger, basePath.WithKey(path.Key), storageClass)
+					obsClient.SetStorageClass(basePath.WithKey(path.Key), storageClass)
 				}
 			},
 			slices.Collect(walker),
@@ -143,7 +144,7 @@ func processSetStorageClass(logger *pterm.Logger, obsClient *obs.ObsClient, base
 		defer prog.Stop()
 		slot.Map(
 			func(key string) {
-				obsClient.SetStorageClass(logger, basePath.WithKey(key), storageClass)
+				obsClient.SetStorageClass(basePath.WithKey(key), storageClass)
 				prog.Increment()
 			},
 			keys,

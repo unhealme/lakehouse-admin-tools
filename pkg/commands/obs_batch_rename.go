@@ -9,13 +9,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/obs"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const ObsBatchRenameVersion = "2026.09.05-0"
 
-func ObsBatchRename(logger *pterm.Logger, args *arguments.ObsBatchRenameArgs) {
+func ObsBatchRename(args *arguments.ObsBatchRenameArgs) {
 	logger.Debug("using batch rename args.", logger.Args(internal.ToArgs(*args)...))
 	inputPath, err := obs.PathFromURI(args.Path)
 	if err != nil {
@@ -29,7 +30,7 @@ func ObsBatchRename(logger *pterm.Logger, args *arguments.ObsBatchRenameArgs) {
 	}
 	var paths []pathToRename
 	var total int
-	for op := range args.ObsClient.Walk(logger, *inputPath, 1, args.DirOnly) {
+	for op := range args.ObsClient.Walk(*inputPath, 1, args.DirOnly) {
 		if base := strings.TrimPrefix(op.Key, inputPath.Key); len(base) > 0 && !strings.HasPrefix(base, args.Prefix) {
 			before := obs.NewObsPath(op.Bucket, op.Key)
 			paths = append(paths, pathToRename{before, path.Join(inputPath.Key, args.Prefix+base)})
@@ -47,7 +48,7 @@ func ObsBatchRename(logger *pterm.Logger, args *arguments.ObsBatchRenameArgs) {
 		utils.NewSlot(max(args.Concurrency, 1)).Map(
 			func(path pathToRename) {
 				if !args.DryRun {
-					args.ObsClient.RenameObject(logger, path.before, path.keyAfter)
+					args.ObsClient.RenameObject(path.before, path.keyAfter)
 				} else {
 					logger.Info("renaming directory.", logger.Args("before", path.before.URI(), "after", path.before.WithKey(path.keyAfter).URI()))
 					time.Sleep(200 + rand.N(300*time.Millisecond))

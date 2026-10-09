@@ -5,14 +5,14 @@ import (
 	"os"
 	"time"
 
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 )
 
 const IamListGroupsVersion = "2026.08.05-0"
 
-func IamListGroups(logger *pterm.Logger, args *arguments.IamListGroupsArgs) {
+func IamListGroups(args *arguments.IamListGroupsArgs) {
 	logger.Debug("using iam list groups args.", logger.Args(internal.ToArgs(*args)...))
 
 	outFile := os.Stdout

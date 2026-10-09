@@ -11,8 +11,8 @@ import (
 	"github.com/go-ldap/ldap/v3/gssapi"
 	"github.com/jcmturner/gokrb5/v8/client"
 	"github.com/jcmturner/gokrb5/v8/iana/flags"
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 )
 
 type UamClient struct {
@@ -100,11 +100,7 @@ func (c UamClient) ListMembers(baseDn, group string, unsafe bool) ([]*GroupInfo,
 	return nil, errors.New("Group not found")
 }
 
-func NewClient(
-	logger *pterm.Logger,
-	ldapUrl, user, passw string,
-	mailDomain, realm string,
-) (*UamClient, error) {
+func NewClient(ldapUrl, user, passw, mailDomain, realm string) (*UamClient, error) {
 	base, err := ldap.DialURL(ldapUrl, ldap.DialWithTLSConfig(&tls.Config{InsecureSkipVerify: true}))
 	if err != nil {
 		return nil, err

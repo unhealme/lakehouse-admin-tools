@@ -5,12 +5,13 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 )
 
 const DataArtsCreateHetuConnectionVersion = "2026.07.07-0"
 
-func DataArtsCreateHetuConnection(logger *pterm.Logger, args *arguments.DataArtsCreateHetuConnectionArgs) {
+func DataArtsCreateHetuConnection(args *arguments.DataArtsCreateHetuConnectionArgs) {
 	logger.Debug("using create hetu connection args.", logger.Args(internal.ToArgs(*args)...))
 	for _, userPair := range args.UserPairs {
 		userName, workspaceName, _ := strings.Cut(userPair, ":")

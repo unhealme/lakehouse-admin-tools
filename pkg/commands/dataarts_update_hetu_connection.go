@@ -6,12 +6,13 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 )
 
 const DataArtsUpdateHetuConnectionVersion = "2026.07.18-0"
 
-func DataArtsUpdateHetuConnection(logger *pterm.Logger, args *arguments.DataArtsUpdateHetuConnectionArgs) {
+func DataArtsUpdateHetuConnection(args *arguments.DataArtsUpdateHetuConnectionArgs) {
 	logger.Debug("using update hetu connection args.", logger.Args(internal.ToArgs(*args)...))
 	tenantDev, tenantProd, hasDev := strings.Cut(args.Tenant, ":")
 	if !hasDev {

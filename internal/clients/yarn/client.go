@@ -9,8 +9,8 @@ import (
 
 	req "github.com/imroc/req/v3"
 	"github.com/jcmturner/gokrb5/v8/spnego"
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 )
 
 type YarnRMClient struct {
@@ -23,7 +23,7 @@ func (c *YarnRMClient) Close() {
 	c.Http = nil
 }
 
-func (c *YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationState, user, queue string, limit int) (*Applications, error) {
+func (c *YarnRMClient) Applications(states []ApplicationState, user, queue string, limit int) (*Applications, error) {
 	var apps Applications
 	req := c.Http.R().SetHeader("Content-Type", "application/json").SetSuccessResult(&apps)
 	if len(states) > 0 {
@@ -50,9 +50,7 @@ func (c *YarnRMClient) Applications(logger *pterm.Logger, states []ApplicationSt
 	return &apps, nil
 }
 
-var killAppBody = []byte(`{"state":"KILLED"}`)
-
-func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) error {
+func (c *YarnRMClient) KillApplication(app Application) error {
 	_, err := c.Http.R().
 		SetBody(killAppBody).
 		SetHeader("Content-Type", "application/json").
@@ -60,19 +58,17 @@ func (c *YarnRMClient) KillApplication(logger *pterm.Logger, app Application) er
 	return err
 }
 
-func (c *YarnRMClient) failoverRetry(logger *pterm.Logger) req.RetryHookFunc {
-	return func(resp *req.Response, err error) {
-		c.RmUrls = append(c.RmUrls[1:], c.RmUrls[0])
-		rmUrl := c.RmUrls[0]
-		c.Http.SetBaseURL(rmUrl.String())
+func (c *YarnRMClient) failoverRetry(resp *req.Response, err error) {
+	c.RmUrls = append(c.RmUrls[1:], c.RmUrls[0])
+	rmUrl := c.RmUrls[0]
+	c.Http.SetBaseURL(rmUrl.String())
 
-		lastReq := resp.Request
-		newUrl := lastReq.URL.Clone()
-		newUrl.Scheme, newUrl.Host = rmUrl.Scheme, rmUrl.Host
-		lastReq.RawURL = newUrl.String()
-		lastReq.Headers.Del(spnego.HTTPHeaderAuthRequest)
-		logger.Debug("swapped urls with new order: " + strings.Join(c.getUrlOrder(), ", "))
-	}
+	lastReq := resp.Request
+	newUrl := lastReq.URL.Clone()
+	newUrl.Scheme, newUrl.Host = rmUrl.Scheme, rmUrl.Host
+	lastReq.RawURL = newUrl.String()
+	lastReq.Headers.Del(spnego.HTTPHeaderAuthRequest)
+	logger.Debug("swapped urls with new order: " + strings.Join(c.getUrlOrder(), ", "))
 }
 
 func (c YarnRMClient) getUrlOrder() []string {
@@ -83,7 +79,7 @@ func (c YarnRMClient) getUrlOrder() []string {
 	return urls
 }
 
-func NewClient(logger *pterm.Logger, rmAddresses []string) (*YarnRMClient, error) {
+func NewClient(rmAddresses []string) (*YarnRMClient, error) {
 	if len(rmAddresses) < 1 {
 		return nil, errors.New("Atleast one RM Address must be specified")
 	}
@@ -104,6 +100,6 @@ func NewClient(logger *pterm.Logger, rmAddresses []string) (*YarnRMClient, error
 	c := new(YarnRMClient{hc, rmUrls})
 	hc.SetBaseURL(rmUrls[0].String()).
 		SetCommonRetryCount(len(rmUrls) - 1).
-		SetCommonRetryHook(c.failoverRetry(logger))
+		SetCommonRetryHook(c.failoverRetry)
 	return c, nil
 }

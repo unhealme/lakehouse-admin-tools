@@ -5,16 +5,16 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/yarn"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const YarnListAppsVersion = "2026.09.17-0"
 
-func YarnListApps(logger *pterm.Logger, args *arguments.YarnListAppsArgs) {
+func YarnListApps(args *arguments.YarnListAppsArgs) {
 	logger.Debug("using list apps args.", logger.Args(internal.ToArgs(*args)...))
 
 	outputHeaders := []string{
@@ -49,7 +49,7 @@ func YarnListApps(logger *pterm.Logger, args *arguments.YarnListAppsArgs) {
 	}
 	defer utils.CloseOutput()
 
-	apps, err := args.YarnClient.Applications(logger, []yarn.ApplicationState(args.States), args.User, args.Queue, args.Limit)
+	apps, err := args.YarnClient.Applications([]yarn.ApplicationState(args.States), args.User, args.Queue, args.Limit)
 	if err != nil {
 		logger.Fatal("unable to get yarn applications.", logger.Args("error", err))
 	}

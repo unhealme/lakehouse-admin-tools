@@ -9,13 +9,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/unhealme/lakehouse-admin-tools/internal"
 	"github.com/unhealme/lakehouse-admin-tools/internal/clients/obs"
+	"github.com/unhealme/lakehouse-admin-tools/internal/logger"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/arguments"
 	"github.com/unhealme/lakehouse-admin-tools/pkg/utils"
 )
 
 const ObsAnalyzeVersion = "2026.10.07-0"
 
-func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
+func ObsAnalyze(args *arguments.ObsAnalyzeArgs) {
 	logger.Debug("using analyze args.", logger.Args(internal.ToArgs(*args)...))
 	if args.CsvOut != "" && args.CsvOut == args.JsonOut {
 		logger.Fatal("unable to write csv and json output to the same file.")
@@ -68,10 +69,10 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 		if args.Fixed || !strings.ContainsAny(path.Key, obs.GlobToken) {
 			inputs = append(inputs, *path)
 		} else {
-			keys := args.ObsClient.Glob(logger, *path)
+			keys := args.ObsClient.Glob(*path)
 			logger.Debug("glob path expanded.", logger.Args("totalKeys", len(keys)))
 			if len(keys) < 1 {
-				pterm.Printf("%s: no such file or directory\n", path.URI())
+				logger.Error(path.URI() + ": no such file or directory")
 			} else {
 				for _, key := range keys {
 					inputs = append(inputs, path.WithKey(key))
@@ -107,7 +108,7 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 		for _, p := range inputs {
 			c := make(chan obs.ObsPathChunked, 1)
 			mainSlot.Do(func() {
-				chunk := args.ObsClient.SplitChunk(logger, args.MinChunks, p)
+				chunk := args.ObsClient.SplitChunk(args.MinChunks, p)
 				logger.Debug("path chunked.", logger.Args(
 					"countDirs", len(chunk.Dirs),
 					"countFiles", len(chunk.Files),
@@ -118,7 +119,7 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 			})
 			wg.Add(1)
 			subSlot.Do(func() {
-				sc <- args.ObsClient.AnalyzeChunk(logger, mainSlot, <-c)
+				sc <- args.ObsClient.AnalyzeChunk(mainSlot, <-c)
 				if prog != nil {
 					prog.Increment()
 				}
@@ -156,7 +157,7 @@ func ObsAnalyze(logger *pterm.Logger, args *arguments.ObsAnalyzeArgs) {
 				}
 			}
 		} else {
-			pterm.Printf("%s: no such file or directory\n", stats.URI())
+			logger.Error(stats.URI() + ": no such file or directory")
 		}
 	}
 	mainSlot.Close()
